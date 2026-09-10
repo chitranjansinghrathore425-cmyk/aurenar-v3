@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AURENAR — Modern Essentials</title>
+  <meta name="description" content="AURENAR creates refined modern essentials with clean silhouettes, considered materials and timeless restraint.">
+  <meta property="og:title" content="AURENAR — Modern Essentials">
+  <meta property="og:description" content="Quietly distinct. Modern essentials by AURENAR.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#f6f6f4">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/store.js"></script>
+</head>
+<body>
+  <div class="announcement">Complimentary shipping on orders over ₹2,500</div>
+  <header class="site-header" id="siteHeader">
+    <button class="mobile-menu" id="menuBtn" aria-label="Open menu"><span></span><span></span></button>
+    <a class="wordmark" href="/" aria-label="AURENAR home">AURENAR</a>
+    <nav class="desktop-nav" aria-label="Primary navigation">
+      <a href="#shop">SHOP</a><a href="#shop" data-filter="women">WOMEN</a><a href="#shop" data-filter="men">MEN</a><a href="#collections">COLLECTIONS</a>
+    </nav>
+    <div class="header-actions">
+      <button class="text-action" id="searchBtn">SEARCH</button>
+      <button class="text-action" id="accountBtn">ACCOUNT</button>
+      <button class="text-action bag-action" id="bagBtn">BAG (<span id="bagCount">0</span>)</button>
+    </div>
+  </header>
+  <div class="mobile-nav" id="mobileNav" aria-hidden="true">
+    <a href="#shop">SHOP</a><a href="#shop" data-filter="women">WOMEN</a><a href="#shop" data-filter="men">MEN</a><a href="#collections">COLLECTIONS</a><a href="#about">ABOUT</a>
+  </div>
+
+  <main>
+    <section class="hero" aria-label="AURENAR introduction">
+      <div class="hero-image" role="img" aria-label="Editorial neutral fashion image"></div>
+      <div class="hero-copy">
+        <p class="eyebrow">AURENAR / COLLECTION 01</p>
+        <h1>Quietly<br><em>distinct.</em></h1>
+        <p class="hero-lede">Refined essentials shaped by clean lines, considered materials and an instinct for restraint.</p>
+        <a class="line-link" href="#shop">EXPLORE THE COLLECTION <span>↗</span></a>
+      </div>
+    </section>
+
+    <section class="intro-strip" id="collections">
+      <p class="eyebrow">THE AURENAR STANDARD</p>
+      <p>Modern clothing, edited with intention.</p>
+    </section>
+
+    <section class="collection-editorial">
+      <div class="editorial-panel editorial-panel--large"><div class="editorial-label"><span>01</span><strong>THE NEW ESSENTIALS</strong><span>VIEW</span></div></div>
+      <div class="editorial-panel editorial-panel--small"><div class="editorial-label"><span>02</span><strong>FORM / FUNCTION</strong><span>VIEW</span></div></div>
+    </section>
+
+    <section class="products-section" id="shop">
+      <div class="section-head">
+        <div><p class="eyebrow">SHOP AURENAR</p><h2>Selected pieces</h2></div>
+        <div class="filter-row" role="group" aria-label="Product filters">
+          <button class="filter is-active" data-filter="all">ALL</button><button class="filter" data-filter="women">WOMEN</button><button class="filter" data-filter="men">MEN</button>
+        </div>
+      </div>
+      <div class="status" id="productStatus" aria-live="polite">Loading collection…</div>
+      <div class="product-grid" id="products"></div>
+    </section>
+
+    <section class="manifesto">
+      <p class="eyebrow">AURENAR / PHILOSOPHY</p>
+      <h2>Elegance doesn't ask for attention.<br><em>It earns it.</em></h2>
+    </section>
+
+    <section class="about-section" id="about">
+      <div><p class="eyebrow">ABOUT AURENAR</p></div>
+      <div><p class="about-lede">A modern clothing label built around clean silhouettes, considered materials and timeless restraint.</p><p class="about-copy">We believe the strongest wardrobe is edited, not crowded. Every AURENAR piece is designed to live beyond a season — quiet enough for everyday life, distinctive enough to be remembered.</p></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-brand"><a class="wordmark wordmark--footer" href="/">AURENAR</a><p>Timeless design. Modern identity. Made to last.</p></div>
+    <div class="footer-links"><div><p class="eyebrow">EXPLORE</p><a href="#shop">Shop</a><a href="#collections">Collections</a><a href="#about">About</a></div><div><p class="eyebrow">CONNECT</p><a href="mailto:hello@aurenar.com">Email</a><a href="#" aria-label="Instagram placeholder">Instagram</a></div></div>
+    <div class="footer-bottom"><span>© 2026 AURENAR</span><span>Made with restraint.</span></div>
+  </footer>
+
+  <div class="overlay" id="overlay" hidden></div>
+  <aside class="drawer" id="bagDrawer" aria-hidden="true" aria-label="Shopping bag"><div class="drawer-head"><h2>Your bag</h2><button class="close-btn" data-close="bagDrawer" aria-label="Close bag">×</button></div><div class="drawer-body" id="bagBody"></div><div class="drawer-foot" id="bagFoot"></div></aside>
+  <aside class="drawer drawer--wide" id="accountDrawer" aria-hidden="true" aria-label="Account"><div class="drawer-head"><h2>Account</h2><button class="close-btn" data-close="accountDrawer" aria-label="Close account">×</button></div><div class="drawer-body" id="accountBody"></div></aside>
+  <aside class="drawer drawer--wide" id="searchDrawer" aria-hidden="true" aria-label="Search"><div class="drawer-head"><h2>Search</h2><button class="close-btn" data-close="searchDrawer" aria-label="Close search">×</button></div><div class="search-wrap"><input id="searchInput" type="search" placeholder="Search the collection" autocomplete="off"><div id="searchResults"></div></div></aside>
+  <aside class="drawer drawer--checkout" id="checkoutDrawer" aria-hidden="true" aria-label="Checkout"><div class="drawer-head"><h2>Checkout</h2><button class="close-btn" data-close="checkoutDrawer" aria-label="Close checkout">×</button></div><div class="drawer-body"><form id="checkoutForm" class="checkout-form"><p class="eyebrow">CONTACT</p><input required name="email" type="email" placeholder="Email address"><p class="eyebrow">SHIPPING ADDRESS</p><div class="two-col"><input required name="firstName" placeholder="First name"><input required name="lastName" placeholder="Last name"></div><input required name="address" placeholder="Address"><div class="two-col"><input required name="city" placeholder="City"><input required name="postal" inputmode="numeric" placeholder="PIN code"></div><input name="phone" inputmode="tel" placeholder="Phone number"><div class="checkout-summary" id="checkoutSummary"></div><div class="payment-note"><strong>Payment</strong><p>Online payment is not connected yet. This checkout is ready for Razorpay or Stripe integration, but no payment will be processed in V3.</p></div><button type="submit" class="primary-btn" disabled>PAYMENT — COMING SOON</button></form></div></aside>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
