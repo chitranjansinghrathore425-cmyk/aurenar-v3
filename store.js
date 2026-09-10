@@ -36,9 +36,11 @@ const fallbackProducts = [
 
 let products = [];
 let activeFilter = "all";
+
 let wishlist = JSON.parse(
   localStorage.getItem("aurenar_wishlist") || "[]"
 );
+
 let cart = JSON.parse(
   localStorage.getItem("aurenar_cart") || "[]"
 );
@@ -94,6 +96,8 @@ function getImage(product) {
 
 async function loadProducts() {
 
+  const status = $("productStatus");
+
   try {
 
     const { data, error } = await supabase
@@ -123,6 +127,10 @@ async function loadProducts() {
     products = fallbackProducts;
   }
 
+  if (status) {
+    status.textContent = "";
+  }
+
   renderProducts();
   updateBagCount();
 }
@@ -148,9 +156,7 @@ function filteredProducts() {
       ).toLowerCase();
 
     return category === activeFilter;
-
   });
-
 }
 
 
@@ -169,7 +175,6 @@ function productImage(product) {
         AURENAR
       </div>
     `;
-
   }
 
   return `
@@ -225,10 +230,11 @@ function renderProducts() {
 
     status.textContent =
       visibleProducts.length +
-      (visibleProducts.length === 1
-        ? " piece"
-        : " pieces");
-
+      (
+        visibleProducts.length === 1
+          ? " piece"
+          : " pieces"
+      );
   }
 
   if (!visibleProducts.length) {
@@ -270,6 +276,7 @@ function renderProducts() {
               href="/product.html?id=${encodeURIComponent(product.id)}"
               class="product-link"
             >
+
               <div class="name">
                 ${escapeHTML(product.name)}
               </div>
@@ -277,6 +284,7 @@ function renderProducts() {
               <div class="price">
                 ${money(product.price)}
               </div>
+
             </a>
 
             <button
@@ -284,7 +292,9 @@ function renderProducts() {
               data-add="${escapeHTML(product.id)}"
               ${outOfStock ? "disabled" : ""}
             >
-              ${outOfStock ? "OUT OF STOCK" : "ADD TO BAG"}
+              ${outOfStock
+                ? "OUT OF STOCK"
+                : "ADD TO BAG"}
             </button>
 
           </div>
@@ -293,7 +303,6 @@ function renderProducts() {
       `;
 
     }).join("");
-
 }
 
 
@@ -320,8 +329,153 @@ function toggleWishlist(id) {
   }
 
   saveWishlist();
+
   renderProducts();
 
+  renderWishlist();
+
+}
+
+
+/* =========================
+   WISHLIST DRAWER
+========================= */
+
+function createWishlistDrawer() {
+
+  if ($("wishlistDrawer")) return;
+
+  const drawer = document.createElement("aside");
+
+  drawer.className = "drawer drawer--wide";
+  drawer.id = "wishlistDrawer";
+  drawer.setAttribute("aria-hidden", "true");
+
+  drawer.innerHTML = `
+    <div class="drawer-head">
+
+      <h2>Wishlist</h2>
+
+      <button
+        class="close-btn"
+        data-close="wishlistDrawer"
+        aria-label="Close wishlist"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <div
+      class="drawer-body"
+      id="wishlistBody"
+    ></div>
+  `;
+
+  document.body.appendChild(drawer);
+
+}
+
+
+function renderWishlist() {
+
+  createWishlistDrawer();
+
+  const body = $("wishlistBody");
+
+  if (!body) return;
+
+  const savedProducts =
+    wishlist
+      .map(id =>
+        products.find(
+          product =>
+            String(product.id) === String(id)
+        )
+      )
+      .filter(Boolean);
+
+  if (!savedProducts.length) {
+
+    body.innerHTML = `
+      <div class="msg">
+        Your wishlist is empty.
+      </div>
+    `;
+
+    return;
+  }
+
+  body.innerHTML =
+    savedProducts.map(product => {
+
+      const image = getImage(product);
+
+      return `
+        <div
+          class="search-result wishlist-result"
+          style="align-items:center"
+        >
+
+          <a
+            href="/product.html?id=${encodeURIComponent(product.id)}"
+            style="flex:1;display:flex;gap:15px;align-items:center"
+          >
+
+            ${
+              image
+                ? `
+                  <img
+                    src="${escapeHTML(image)}"
+                    alt="${escapeHTML(product.name)}"
+                    style="width:72px;height:92px;object-fit:cover"
+                  >
+                `
+                : `
+                  <div
+                    style="
+                      width:72px;
+                      height:92px;
+                      display:flex;
+                      align-items:center;
+                      justify-content:center;
+                      background:#e8e5de;
+                      font-family:'Cormorant Garamond',serif;
+                      font-size:13px;
+                    "
+                  >
+                    AURENAR
+                  </div>
+                `
+            }
+
+            <div>
+
+              <div>
+                ${escapeHTML(product.name)}
+              </div>
+
+              <div class="msg">
+                ${money(product.price)}
+              </div>
+
+            </div>
+
+          </a>
+
+          <button
+            data-wishlist="${escapeHTML(product.id)}"
+            aria-label="Remove from wishlist"
+            title="Remove from wishlist"
+            style="font-size:20px"
+          >
+            ♥
+          </button>
+
+        </div>
+      `;
+
+    }).join("");
 }
 
 
@@ -338,6 +492,7 @@ function addToBag(id) {
   if (!product) return;
 
   if (Number(product.stock || 0) <= 0) {
+
     showToast("This piece is out of stock");
     return;
   }
@@ -352,9 +507,15 @@ function addToBag(id) {
       existing.qty <
       Number(product.stock)
     ) {
+
       existing.qty += 1;
+
     } else {
-      showToast("Maximum available stock reached");
+
+      showToast(
+        "Maximum available stock reached"
+      );
+
       return;
     }
 
@@ -372,14 +533,14 @@ function addToBag(id) {
   renderBag();
 
   showToast("Added to bag");
-
 }
 
 
 function changeQuantity(id, change) {
 
   const item = cart.find(
-    product => String(product.id) === String(id)
+    product =>
+      String(product.id) === String(id)
   );
 
   if (!item) return;
@@ -392,13 +553,11 @@ function changeQuantity(id, change) {
       product =>
         String(product.id) !== String(id)
     );
-
   }
 
   saveCart();
   updateBagCount();
   renderBag();
-
 }
 
 
@@ -416,7 +575,6 @@ function updateBagCount() {
   if (element) {
     element.textContent = count;
   }
-
 }
 
 
@@ -446,70 +604,80 @@ function renderBag() {
 
   let total = 0;
 
-  body.innerHTML = cart.map(item => {
+  body.innerHTML =
+    cart.map(item => {
 
-    const product = products.find(
-      p =>
-        String(p.id) ===
-        String(item.id)
-    );
+      const product = products.find(
+        p =>
+          String(p.id) ===
+          String(item.id)
+      );
 
-    if (!product) return "";
+      if (!product) return "";
 
-    const subtotal =
-      Number(product.price || 0) *
-      Number(item.qty || 0);
+      const subtotal =
+        Number(product.price || 0) *
+        Number(item.qty || 0);
 
-    total += subtotal;
+      total += subtotal;
 
-    return `
-      <div class="bagrow">
+      return `
+        <div class="bagrow">
 
-        <div>
-          <strong>
-            ${escapeHTML(product.name)}
-          </strong>
+          <div>
 
-          <br>
+            <strong>
+              ${escapeHTML(product.name)}
+            </strong>
 
-          <span class="msg">
-            ${money(product.price)}
-          </span>
+            <br>
+
+            <span class="msg">
+              ${money(product.price)}
+            </span>
+
+          </div>
+
+          <div>
+
+            <button
+              data-quantity="${escapeHTML(product.id)}"
+              data-change="-1"
+              aria-label="Decrease quantity"
+            >
+              −
+            </button>
+
+            <span>
+              ${item.qty}
+            </span>
+
+            <button
+              data-quantity="${escapeHTML(product.id)}"
+              data-change="1"
+              aria-label="Increase quantity"
+            >
+              +
+            </button>
+
+          </div>
+
         </div>
+      `;
 
-        <div>
-
-          <button
-            data-quantity="${escapeHTML(product.id)}"
-            data-change="-1"
-            aria-label="Decrease quantity"
-          >
-            −
-          </button>
-
-          <span>
-            ${item.qty}
-          </span>
-
-          <button
-            data-quantity="${escapeHTML(product.id)}"
-            data-change="1"
-            aria-label="Increase quantity"
-          >
-            +
-          </button>
-
-        </div>
-
-      </div>
-    `;
-
-  }).join("");
+    }).join("");
 
   if (foot) {
 
     foot.innerHTML = `
-      <div class="bag-total">
+      <div
+        class="bag-total"
+        style="
+          display:flex;
+          justify-content:space-between;
+          margin-bottom:15px;
+        "
+      >
         <span>Total</span>
         <strong>${money(total)}</strong>
       </div>
@@ -521,9 +689,7 @@ function renderBag() {
         CHECKOUT
       </button>
     `;
-
   }
-
 }
 
 
@@ -539,6 +705,7 @@ function openDrawer(id) {
   if (!drawer) return;
 
   drawer.classList.add("open");
+
   drawer.setAttribute(
     "aria-hidden",
     "false"
@@ -551,9 +718,7 @@ function openDrawer(id) {
     requestAnimationFrame(() => {
       overlay.classList.add("open");
     });
-
   }
-
 }
 
 
@@ -564,6 +729,7 @@ function closeDrawers() {
     .forEach(drawer => {
 
       drawer.classList.remove("open");
+
       drawer.setAttribute(
         "aria-hidden",
         "true"
@@ -580,7 +746,6 @@ function closeDrawers() {
     setTimeout(() => {
       overlay.hidden = true;
     }, 250);
-
   }
 
 }
@@ -640,6 +805,7 @@ function searchProducts(query) {
         >
 
           <div style="flex:1">
+
             <div>
               ${escapeHTML(product.name)}
             </div>
@@ -647,6 +813,7 @@ function searchProducts(query) {
             <div class="msg">
               ${money(product.price)}
             </div>
+
           </div>
 
           <span>↗</span>
@@ -655,7 +822,6 @@ function searchProducts(query) {
       `;
 
     }).join("");
-
 }
 
 
@@ -688,14 +854,17 @@ function renderAccount() {
       <a
         href="/checkout.html"
         class="primary"
-        style="display:block;text-align:center;margin-top:25px"
+        style="
+          display:block;
+          text-align:center;
+          margin-top:25px
+        "
       >
         CONTINUE TO CHECKOUT
       </a>
 
     </div>
   `;
-
 }
 
 
@@ -719,17 +888,18 @@ function showToast(message) {
   toastTimer = setTimeout(() => {
     toast.classList.remove("show");
   }, 2200);
-
 }
 
 
 /* =========================
-   FILTER EVENTS
+   CLICK EVENTS
 ========================= */
 
 document.addEventListener(
   "click",
   event => {
+
+    /* FILTER */
 
     const filter =
       event.target.closest("[data-filter]");
@@ -783,11 +953,10 @@ document.addEventListener(
         });
 
       renderProducts();
-
     }
 
 
-    /* WISHLIST */
+    /* WISHLIST CARD / DRAWER */
 
     const wish =
       event.target.closest(
@@ -797,6 +966,7 @@ document.addEventListener(
     if (wish) {
 
       event.preventDefault();
+      event.stopPropagation();
 
       toggleWishlist(
         wish.dataset.wishlist
@@ -856,6 +1026,19 @@ document.addEventListener(
     }
 
 
+    /* WISHLIST HEADER */
+
+    if (
+      event.target.closest("#wishlistBtn")
+    ) {
+
+      renderWishlist();
+      openDrawer("wishlistDrawer");
+
+      return;
+    }
+
+
     /* ACCOUNT */
 
     if (
@@ -879,7 +1062,8 @@ document.addEventListener(
 
       setTimeout(() => {
 
-        const input = $("searchInput");
+        const input =
+          $("searchInput");
 
         if (input) input.focus();
 
@@ -907,7 +1091,6 @@ document.addEventListener(
             ? "false"
             : "true"
         );
-
       }
 
       return;
@@ -924,6 +1107,8 @@ document.addEventListener(
       return;
     }
 
+
+    /* OVERLAY */
 
     if (
       event.target.id === "overlay"
@@ -942,7 +1127,6 @@ document.addEventListener(
 
       window.location.href =
         "/checkout.html";
-
     }
 
   }
@@ -964,7 +1148,6 @@ document.addEventListener(
       searchProducts(
         event.target.value
       );
-
     }
 
   }
@@ -972,7 +1155,7 @@ document.addEventListener(
 
 
 /* =========================
-   ESCAPE KEY
+   ESCAPE
 ========================= */
 
 document.addEventListener(
@@ -991,6 +1174,7 @@ document.addEventListener(
    INITIALISE
 ========================= */
 
+createWishlistDrawer();
 renderBag();
 updateBagCount();
 loadProducts();
