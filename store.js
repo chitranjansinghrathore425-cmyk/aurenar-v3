@@ -1,72 +1,996 @@
-import { supabase } from './supabase-client.js';
+import { supabase } from "./supabase.js";
 
-const FALLBACK = [
-  { id:'fallback-1', name:'White Linen Shirt', slug:'white-linen-shirt', price:1499, compare_at_price:null, description:'A clean linen essential with a relaxed, considered silhouette.', images:['https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=1200&q=82'], sizes:['S','M','L','XL'], stock:25, is_active:true },
-  { id:'fallback-2', name:'Noir Overshirt', slug:'noir-overshirt', price:1899, compare_at_price:null, description:'A structured everyday layer in a deep, understated tone.', images:['https://images.unsplash.com/photo-1598808503746-f34c53b9323e?auto=format&fit=crop&w=1200&q=82'], sizes:['S','M','L','XL'], stock:18, is_active:true },
-  { id:'fallback-3', name:'Stone Trousers', slug:'stone-trousers', price:1799, compare_at_price:null, description:'Relaxed tailored trousers designed for an effortless line.', images:['https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1200&q=82'], sizes:['30','32','34','36'], stock:14, is_active:true }
+/* =========================
+   AURENAR STORE
+========================= */
+
+const fallbackProducts = [
+  {
+    id: "demo1",
+    name: "White Linen Shirt",
+    price: 1499,
+    images: [],
+    sizes: ["S", "M", "L", "XL"],
+    stock: 10,
+    description: "A clean linen essential."
+  },
+  {
+    id: "demo2",
+    name: "Noir Overshirt",
+    price: 1899,
+    images: [],
+    sizes: ["S", "M", "L", "XL"],
+    stock: 10,
+    description: "A structured everyday layer."
+  },
+  {
+    id: "demo3",
+    name: "Stone Trousers",
+    price: 1799,
+    images: [],
+    sizes: ["30", "32", "34", "36"],
+    stock: 10,
+    description: "Relaxed tailored trousers."
+  }
 ];
 
-let products=[];
-let cart=readJSON('aurenar_cart',[]);
-let wishlist=readJSON('aurenar_wishlist',[]);
-let activeFilter='all';
+let products = [];
+let activeFilter = "all";
+let wishlist = JSON.parse(
+  localStorage.getItem("aurenar_wishlist") || "[]"
+);
+let cart = JSON.parse(
+  localStorage.getItem("aurenar_cart") || "[]"
+);
 
-const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-function readJSON(k,f){try{return JSON.parse(localStorage.getItem(k)) ?? f}catch{return f}}
-function save(){localStorage.setItem('aurenar_cart',JSON.stringify(cart));localStorage.setItem('aurenar_wishlist',JSON.stringify(wishlist))}
-function money(n){return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n)||0)}
-function imgs(p){if(Array.isArray(p.images))return p.images.filter(Boolean); if(typeof p.images==='string'){try{const x=JSON.parse(p.images);return Array.isArray(x)?x:[p.images]}catch{return [p.images]}} return []}
-function normalize(p){return {...p,images:imgs(p),sizes:Array.isArray(p.sizes)?p.sizes:[],stock:Number(p.stock)||0}}
-function safe(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function productImage(p){return imgs(p)[0] || 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=82'}
 
-async function loadProducts(){
-  const status=$('#productStatus');
-  try{
-    const {data,error}=await supabase.from('products').select('id,name,slug,description,price,compare_at_price,images,sizes,stock,is_active,created_at,updated_at').eq('is_active',true).order('created_at',{ascending:false});
-    if(error) throw error;
-    products=(data||[]).map(normalize);
-    if(!products.length) products=FALLBACK;
-    if(status) status.textContent=products.length ? `${products.length} pieces` : '';
-  }catch(err){
-    console.warn('AURENAR: product load failed; using fallback collection.',err);
-    products=FALLBACK;
-    if(status) status.textContent='Showing the preview collection';
+/* =========================
+   HELPERS
+========================= */
+
+const $ = id => document.getElementById(id);
+
+const money = value =>
+  "₹" + Number(value || 0).toLocaleString("en-IN");
+
+const escapeHTML = value =>
+  String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+
+function saveCart() {
+  localStorage.setItem(
+    "aurenar_cart",
+    JSON.stringify(cart)
+  );
+}
+
+function saveWishlist() {
+  localStorage.setItem(
+    "aurenar_wishlist",
+    JSON.stringify(wishlist)
+  );
+}
+
+function getImage(product) {
+  if (
+    Array.isArray(product.images) &&
+    product.images.length
+  ) {
+    return product.images[0];
   }
-  renderProducts(); renderBag(); updateBagCount();
+
+  return "";
 }
-function filtered(){return activeFilter==='all'?products:products.filter(p=>String(p.name).toLowerCase().includes(activeFilter)||String(p.description||'').toLowerCase().includes(activeFilter))}
-function renderProducts(){
-  const root=$('#products'); if(!root)return;
-  const list=filtered();
-  root.innerHTML=list.map((p,i)=>`<article class="product-card"><a class="product-image" href="/product.html?slug=${encodeURIComponent(p.slug)}"><img src="${safe(productImage(p))}" alt="${safe(p.name)}" loading="${i<4?'eager':'lazy'}"><span class="product-index">${String(i+1).padStart(2,'0')}</span></a><button class="wishlist-btn ${wishlist.includes(p.id)?'is-liked':''}" data-wish="${safe(p.id)}" aria-label="${wishlist.includes(p.id)?'Remove from wishlist':'Add to wishlist'}">♡</button><div class="product-info"><a href="/product.html?slug=${encodeURIComponent(p.slug)}"><h3>${safe(p.name)}</h3><p>${money(p.price)} ${p.compare_at_price?`<del>${money(p.compare_at_price)}</del>`:''}</p></a><button class="mini-add" data-add="${safe(p.id)}" ${p.stock<=0?'disabled':''}>${p.stock<=0?'OUT OF STOCK':'ADD TO BAG'}</button></div></article>`).join('');
-  $$('.wishlist-btn',root).forEach(b=>b.addEventListener('click',()=>toggleWish(b.dataset.wish)));
-  $$('.mini-add',root).forEach(b=>b.addEventListener('click',()=>addToBag(b.dataset.add)));
+
+
+/* =========================
+   LOAD PRODUCTS
+========================= */
+
+async function loadProducts() {
+
+  try {
+
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", {
+        ascending: false
+      });
+
+    if (error) throw error;
+
+    products = data || [];
+
+  } catch (error) {
+
+    console.warn(
+      "Supabase products unavailable:",
+      error
+    );
+
+    products = [];
+
+  }
+
+  if (!products.length) {
+    products = fallbackProducts;
+  }
+
+  renderProducts();
+  updateBagCount();
 }
-function toggleWish(id){wishlist=wishlist.includes(id)?wishlist.filter(x=>String(x)!==String(id)):[...wishlist,id];save();renderProducts();toast(wishlist.includes(id)?'Added to wishlist':'Removed from wishlist')}
-function findProduct(id){return products.find(p=>String(p.id)===String(id))}
-function addToBag(id,size){const p=findProduct(id);if(!p)return;if(p.stock<=0){toast('This piece is currently out of stock');return}const chosen=size || (p.sizes?.length===1?p.sizes[0]:null);if(p.sizes?.length&&!chosen){openProductChooser(p);return}const key=`${p.id}::${chosen||''}`;const item=cart.find(x=>x.key===key);if(item)item.qty=Math.min(item.qty+1,p.stock);else cart.push({key,id:p.id,size:chosen||'',qty:1});save();renderBag();updateBagCount();toast('Added to bag');openDrawer('bagDrawer')}
-function changeQty(key,d){const x=cart.find(i=>i.key===key),p=x&&findProduct(x.id);if(!x||!p)return;x.qty=Math.max(0,Math.min(p.stock,x.qty+d));if(!x.qty)cart=cart.filter(i=>i.key!==key);save();renderBag();updateBagCount()}
-function removeBag(key){cart=cart.filter(i=>i.key!==key);save();renderBag();updateBagCount()}
-function bagSubtotal(){return cart.reduce((t,x)=>t+(findProduct(x.id)?.price||0)*x.qty,0)}
-function updateBagCount(){const n=cart.reduce((t,x)=>t+x.qty,0); $$('#bagCount').forEach(el=>el.textContent=n)}
-function renderBag(){const body=$('#bagBody'),foot=$('#bagFoot');if(!body)return;if(!cart.length){body.innerHTML='<div class="empty-state"><p>Your bag is empty.</p><a class="line-link" href="/#shop">CONTINUE SHOPPING ↗</a></div>';foot.innerHTML='';return}body.innerHTML=cart.map(x=>{const p=findProduct(x.id);if(!p)return '';return `<div class="bag-item"><img src="${safe(productImage(p))}" alt="${safe(p.name)}"><div class="bag-item-main"><a href="/product.html?slug=${encodeURIComponent(p.slug)}"><strong>${safe(p.name)}</strong></a><span>${x.size?`Size ${safe(x.size)} · `:''}${money(p.price)}</span><div class="qty"><button data-qty="${safe(x.key)}" data-d="-1" aria-label="Decrease quantity">−</button><span>${x.qty}</span><button data-qty="${safe(x.key)}" data-d="1" aria-label="Increase quantity">+</button><button class="remove" data-remove="${safe(x.key)}">REMOVE</button></div></div></div>`}).join('');$$('[data-qty]',body).forEach(b=>b.addEventListener('click',()=>changeQty(b.dataset.qty,Number(b.dataset.d))));$$('[data-remove]',body).forEach(b=>b.addEventListener('click',()=>removeBag(b.dataset.remove)));const subtotal=bagSubtotal(),shipping=subtotal>=2500?0:199;foot.innerHTML=`<div class="totals"><span>SUBTOTAL</span><strong>${money(subtotal)}</strong><span>SHIPPING</span><strong>${shipping?money(shipping):'COMPLIMENTARY'}</strong><span class="total-line">TOTAL</span><strong class="total-line">${money(subtotal+shipping)}</strong></div><button class="primary-btn" id="checkoutBtn">PROCEED TO CHECKOUT</button>`;$('#checkoutBtn',foot)?.addEventListener('click',()=>{openCheckout()})}
-function openProductChooser(p){const options=(p.sizes||[]).map(s=>`<button class="size-option" data-size="${safe(s)}">${safe(s)}</button>`).join('');showModal(`SELECT SIZE · ${safe(p.name)}`,`<div class="size-grid">${options}</div>`);$$('.size-option').forEach(b=>b.addEventListener('click',()=>{closeModal();addToBag(p.id,b.dataset.size)}))}
-function showModal(title,html){let m=$('#quickModal');if(!m){m=document.createElement('div');m.id='quickModal';m.className='quick-modal';document.body.appendChild(m)}m.innerHTML=`<div class="quick-modal-card"><button class="close-btn" data-modal-close>×</button><p class="eyebrow">AURENAR</p><h2>${title}</h2>${html}</div>`;m.classList.add('open');$('[data-modal-close]',m).addEventListener('click',closeModal)}function closeModal(){$('#quickModal')?.classList.remove('open')}
-function openDrawer(id){const el=$('#'+id),ov=$('#overlay');if(!el)return;el.classList.add('open');el.setAttribute('aria-hidden','false');if(ov){ov.hidden=false;ov.classList.add('open')}}function closeDrawer(id){const el=$('#'+id);if(el){el.classList.remove('open');el.setAttribute('aria-hidden','true')}if(!$$('.drawer.open').length){const ov=$('#overlay');if(ov){ov.classList.remove('open');ov.hidden=true}}}
-function openCheckout(){renderCheckout();openDrawer('checkoutDrawer')}
-function renderCheckout(){const s=$('#checkoutSummary');if(!s)return;const subtotal=bagSubtotal(),shipping=subtotal>=2500?0:199;s.innerHTML=`<div><span>SUBTOTAL</span><strong>${money(subtotal)}</strong></div><div><span>SHIPPING</span><strong>${shipping?money(shipping):'COMPLIMENTARY'}</strong></div><div class="summary-total"><span>TOTAL</span><strong>${money(subtotal+shipping)}</strong></div>`}
-async function renderAccount(){const body=$('#accountBody');if(!body)return;body.innerHTML='<p>Loading account…</p>';const {data:{session}}=await supabase.auth.getSession();if(!session){body.innerHTML=`<div class="account-intro"><p class="eyebrow">YOUR AURENAR ACCOUNT</p><h2>Keep your collection close.</h2><p>Sign in to save your wishlist and keep your account ready for future orders.</p></div><form id="authForm" class="auth-form"><input required name="email" type="email" placeholder="Email address"><input required name="password" type="password" minlength="6" placeholder="Password"><button class="primary-btn" type="submit">SIGN IN</button><button class="secondary-btn" type="button" id="signupBtn">CREATE ACCOUNT</button><p id="authMessage" class="form-message"></p></form>`;$('#authForm',body).addEventListener('submit',async e=>{e.preventDefault();const fd=new FormData(e.currentTarget);const {error}=await supabase.auth.signInWithPassword({email:fd.get('email'),password:fd.get('password')});$('#authMessage').textContent=error?error.message:'Signed in.';if(!error){toast('Welcome back');renderAccount()}});$('#signupBtn',body).addEventListener('click',async()=>{const f=$('#authForm'),fd=new FormData(f);const {error}=await supabase.auth.signUp({email:fd.get('email'),password:fd.get('password')});$('#authMessage').textContent=error?error.message:'Account created. Check your email if confirmation is enabled.'});return}body.innerHTML=`<div class="account-intro"><p class="eyebrow">SIGNED IN</p><h2>${safe(session.user.email)}</h2><p>Your account is ready for future order history and faster checkout.</p></div><div class="account-actions"><button class="secondary-btn" id="signOutBtn">SIGN OUT</button><button class="secondary-btn" id="wishlistBtn">VIEW WISHLIST (${wishlist.length})</button></div>`;$('#signOutBtn',body).addEventListener('click',async()=>{await supabase.auth.signOut();renderAccount();toast('Signed out')});$('#wishlistBtn',body).addEventListener('click',()=>{closeDrawer('accountDrawer');activeFilter='all';document.querySelector('#shop')?.scrollIntoView({behavior:'smooth'});toast('Wishlist items are marked with ♥')})}
-function openSearch(){openDrawer('searchDrawer');setTimeout(()=>$('#searchInput')?.focus(),100);renderSearch('')}
-function renderSearch(q){const r=$('#searchResults');if(!r)return;const query=q.trim().toLowerCase();const list=query?products.filter(p=>`${p.name} ${p.description||''}`.toLowerCase().includes(query)):products.slice(0,5);r.innerHTML=list.map(p=>`<a class="search-result" href="/product.html?slug=${encodeURIComponent(p.slug)}"><img src="${safe(productImage(p))}" alt=""><span><strong>${safe(p.name)}</strong><small>${money(p.price)}</small></span></a>`).join('') || '<p class="empty-state">No pieces found.</p>'}
-function toast(message){const t=$('#toast');if(!t)return;t.textContent=message;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),2200)}
-function wire(){
-  $('#bagBtn')?.addEventListener('click',()=>openDrawer('bagDrawer'));$('#accountBtn')?.addEventListener('click',()=>{openDrawer('accountDrawer');renderAccount()});$('#searchBtn')?.addEventListener('click',openSearch);$('#searchInput')?.addEventListener('input',e=>renderSearch(e.target.value));
-  $('#overlay')?.addEventListener('click',()=>$$('.drawer.open').forEach(d=>closeDrawer(d.id)));$$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeDrawer(b.dataset.close)));
-  $$('.filter,[data-filter]').forEach(b=>b.addEventListener('click',e=>{const f=b.dataset.filter;if(!f)return;activeFilter=f;$$('.filter').forEach(x=>x.classList.toggle('is-active',x.dataset.filter===f));document.querySelector('#shop')?.scrollIntoView({behavior:'smooth'});renderProducts()}));
-  $('#menuBtn')?.addEventListener('click',()=>{const n=$('#mobileNav');n.classList.toggle('open');n.setAttribute('aria-hidden',n.classList.contains('open')?'false':'true')});
-  $('#checkoutForm')?.addEventListener('submit',e=>e.preventDefault());
-  window.addEventListener('storage',()=>{cart=readJSON('aurenar_cart',[]);wishlist=readJSON('aurenar_wishlist',[]);renderProducts();renderBag();updateBagCount()});
+
+
+/* =========================
+   FILTER
+========================= */
+
+function filteredProducts() {
+
+  if (activeFilter === "all") {
+    return products;
+  }
+
+  return products.filter(product => {
+
+    const category =
+      String(
+        product.category ||
+        product.gender ||
+        ""
+      ).toLowerCase();
+
+    return category === activeFilter;
+
+  });
+
 }
-wire();loadProducts();
-export { products, addToBag, money, productImage, findProduct };
+
+
+/* =========================
+   PRODUCT IMAGE
+========================= */
+
+function productImage(product) {
+
+  const image = getImage(product);
+
+  if (!image) {
+
+    return `
+      <div class="placeholder">
+        AURENAR
+      </div>
+    `;
+
+  }
+
+  return `
+    <img
+      src="${escapeHTML(image)}"
+      alt="${escapeHTML(product.name)}"
+      loading="lazy"
+    >
+  `;
+}
+
+
+/* =========================
+   WISHLIST BUTTON
+========================= */
+
+function wishlistButton(product) {
+
+  const active = wishlist.some(
+    id => String(id) === String(product.id)
+  );
+
+  return `
+    <button
+      class="product-wishlist ${active ? "is-active" : ""}"
+      data-wishlist="${escapeHTML(product.id)}"
+      aria-label="${active ? "Remove from wishlist" : "Add to wishlist"}"
+      title="${active ? "Remove from wishlist" : "Add to wishlist"}"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20.8 8.7c0 5.2-8.8 10.3-8.8 10.3S3.2 13.9 3.2 8.7C3.2 5.8 5.3 4 7.8 4c1.7 0 3.3.9 4.2 2.3C12.9 4.9 14.5 4 16.2 4c2.5 0 4.6 1.8 4.6 4.7Z"></path>
+      </svg>
+    </button>
+  `;
+}
+
+
+/* =========================
+   PRODUCT CARDS
+========================= */
+
+function renderProducts() {
+
+  const container = $("products");
+
+  if (!container) return;
+
+  const visibleProducts = filteredProducts();
+
+  const status = $("productStatus");
+
+  if (status) {
+
+    status.textContent =
+      visibleProducts.length +
+      (visibleProducts.length === 1
+        ? " piece"
+        : " pieces");
+
+  }
+
+  if (!visibleProducts.length) {
+
+    container.innerHTML = `
+      <div class="empty-products">
+        No pieces available in this collection.
+      </div>
+    `;
+
+    return;
+  }
+
+  container.innerHTML =
+    visibleProducts.map(product => {
+
+      const outOfStock =
+        Number(product.stock || 0) <= 0;
+
+      return `
+        <article class="product-card">
+
+          <div class="photo">
+
+            <a
+              href="/product.html?id=${encodeURIComponent(product.id)}"
+              aria-label="${escapeHTML(product.name)}"
+            >
+              ${productImage(product)}
+            </a>
+
+            ${wishlistButton(product)}
+
+          </div>
+
+          <div class="info">
+
+            <a
+              href="/product.html?id=${encodeURIComponent(product.id)}"
+              class="product-link"
+            >
+              <div class="name">
+                ${escapeHTML(product.name)}
+              </div>
+
+              <div class="price">
+                ${money(product.price)}
+              </div>
+            </a>
+
+            <button
+              class="cardbtn"
+              data-add="${escapeHTML(product.id)}"
+              ${outOfStock ? "disabled" : ""}
+            >
+              ${outOfStock ? "OUT OF STOCK" : "ADD TO BAG"}
+            </button>
+
+          </div>
+
+        </article>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================
+   WISHLIST
+========================= */
+
+function toggleWishlist(id) {
+
+  const index = wishlist.findIndex(
+    item => String(item) === String(id)
+  );
+
+  if (index >= 0) {
+
+    wishlist.splice(index, 1);
+    showToast("Removed from wishlist");
+
+  } else {
+
+    wishlist.push(id);
+    showToast("Added to wishlist");
+
+  }
+
+  saveWishlist();
+  renderProducts();
+
+}
+
+
+/* =========================
+   BAG
+========================= */
+
+function addToBag(id) {
+
+  const product = products.find(
+    item => String(item.id) === String(id)
+  );
+
+  if (!product) return;
+
+  if (Number(product.stock || 0) <= 0) {
+    showToast("This piece is out of stock");
+    return;
+  }
+
+  const existing = cart.find(
+    item => String(item.id) === String(id)
+  );
+
+  if (existing) {
+
+    if (
+      existing.qty <
+      Number(product.stock)
+    ) {
+      existing.qty += 1;
+    } else {
+      showToast("Maximum available stock reached");
+      return;
+    }
+
+  } else {
+
+    cart.push({
+      id: product.id,
+      qty: 1
+    });
+
+  }
+
+  saveCart();
+  updateBagCount();
+  renderBag();
+
+  showToast("Added to bag");
+
+}
+
+
+function changeQuantity(id, change) {
+
+  const item = cart.find(
+    product => String(product.id) === String(id)
+  );
+
+  if (!item) return;
+
+  item.qty += change;
+
+  if (item.qty <= 0) {
+
+    cart = cart.filter(
+      product =>
+        String(product.id) !== String(id)
+    );
+
+  }
+
+  saveCart();
+  updateBagCount();
+  renderBag();
+
+}
+
+
+function updateBagCount() {
+
+  const count =
+    cart.reduce(
+      (total, item) =>
+        total + Number(item.qty || 0),
+      0
+    );
+
+  const element = $("bagCount");
+
+  if (element) {
+    element.textContent = count;
+  }
+
+}
+
+
+/* =========================
+   BAG DRAWER
+========================= */
+
+function renderBag() {
+
+  const body = $("bagBody");
+  const foot = $("bagFoot");
+
+  if (!body) return;
+
+  if (!cart.length) {
+
+    body.innerHTML = `
+      <p class="msg">
+        Your bag is empty.
+      </p>
+    `;
+
+    if (foot) foot.innerHTML = "";
+
+    return;
+  }
+
+  let total = 0;
+
+  body.innerHTML = cart.map(item => {
+
+    const product = products.find(
+      p =>
+        String(p.id) ===
+        String(item.id)
+    );
+
+    if (!product) return "";
+
+    const subtotal =
+      Number(product.price || 0) *
+      Number(item.qty || 0);
+
+    total += subtotal;
+
+    return `
+      <div class="bagrow">
+
+        <div>
+          <strong>
+            ${escapeHTML(product.name)}
+          </strong>
+
+          <br>
+
+          <span class="msg">
+            ${money(product.price)}
+          </span>
+        </div>
+
+        <div>
+
+          <button
+            data-quantity="${escapeHTML(product.id)}"
+            data-change="-1"
+            aria-label="Decrease quantity"
+          >
+            −
+          </button>
+
+          <span>
+            ${item.qty}
+          </span>
+
+          <button
+            data-quantity="${escapeHTML(product.id)}"
+            data-change="1"
+            aria-label="Increase quantity"
+          >
+            +
+          </button>
+
+        </div>
+
+      </div>
+    `;
+
+  }).join("");
+
+  if (foot) {
+
+    foot.innerHTML = `
+      <div class="bag-total">
+        <span>Total</span>
+        <strong>${money(total)}</strong>
+      </div>
+
+      <button
+        class="primary"
+        id="checkoutButton"
+      >
+        CHECKOUT
+      </button>
+    `;
+
+  }
+
+}
+
+
+/* =========================
+   DRAWERS
+========================= */
+
+function openDrawer(id) {
+
+  const drawer = $(id);
+  const overlay = $("overlay");
+
+  if (!drawer) return;
+
+  drawer.classList.add("open");
+  drawer.setAttribute(
+    "aria-hidden",
+    "false"
+  );
+
+  if (overlay) {
+
+    overlay.hidden = false;
+
+    requestAnimationFrame(() => {
+      overlay.classList.add("open");
+    });
+
+  }
+
+}
+
+
+function closeDrawers() {
+
+  document
+    .querySelectorAll(".drawer.open")
+    .forEach(drawer => {
+
+      drawer.classList.remove("open");
+      drawer.setAttribute(
+        "aria-hidden",
+        "true"
+      );
+
+    });
+
+  const overlay = $("overlay");
+
+  if (overlay) {
+
+    overlay.classList.remove("open");
+
+    setTimeout(() => {
+      overlay.hidden = true;
+    }, 250);
+
+  }
+
+}
+
+
+/* =========================
+   SEARCH
+========================= */
+
+function searchProducts(query) {
+
+  const results = $("searchResults");
+
+  if (!results) return;
+
+  const term =
+    String(query || "")
+      .trim()
+      .toLowerCase();
+
+  if (!term) {
+
+    results.innerHTML = `
+      <p class="msg">
+        Search the AURENAR collection.
+      </p>
+    `;
+
+    return;
+  }
+
+  const matches =
+    products.filter(product =>
+      String(product.name || "")
+        .toLowerCase()
+        .includes(term)
+    );
+
+  if (!matches.length) {
+
+    results.innerHTML = `
+      <p class="msg">
+        No pieces found.
+      </p>
+    `;
+
+    return;
+  }
+
+  results.innerHTML =
+    matches.map(product => {
+
+      return `
+        <a
+          class="search-result"
+          href="/product.html?id=${encodeURIComponent(product.id)}"
+        >
+
+          <div style="flex:1">
+            <div>
+              ${escapeHTML(product.name)}
+            </div>
+
+            <div class="msg">
+              ${money(product.price)}
+            </div>
+          </div>
+
+          <span>↗</span>
+
+        </a>
+      `;
+
+    }).join("");
+
+}
+
+
+/* =========================
+   ACCOUNT
+========================= */
+
+function renderAccount() {
+
+  const body = $("accountBody");
+
+  if (!body) return;
+
+  body.innerHTML = `
+    <div class="account-panel">
+
+      <p class="eyebrow">
+        AURENAR ACCOUNT
+      </p>
+
+      <h3>
+        Your account
+      </h3>
+
+      <p class="msg">
+        Sign in or create an account to manage
+        your orders and personal details.
+      </p>
+
+      <a
+        href="/checkout.html"
+        class="primary"
+        style="display:block;text-align:center;margin-top:25px"
+      >
+        CONTINUE TO CHECKOUT
+      </a>
+
+    </div>
+  `;
+
+}
+
+
+/* =========================
+   TOAST
+========================= */
+
+let toastTimer;
+
+function showToast(message) {
+
+  const toast = $("toast");
+
+  if (!toast) return;
+
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  clearTimeout(toastTimer);
+
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2200);
+
+}
+
+
+/* =========================
+   FILTER EVENTS
+========================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const filter =
+      event.target.closest("[data-filter]");
+
+    if (
+      filter &&
+      filter.classList.contains("filter")
+    ) {
+
+      event.preventDefault();
+
+      activeFilter =
+        filter.dataset.filter || "all";
+
+      document
+        .querySelectorAll(".filter")
+        .forEach(button =>
+          button.classList.remove("is-active")
+        );
+
+      filter.classList.add("is-active");
+
+      renderProducts();
+
+      return;
+    }
+
+
+    /* NAV FILTER */
+
+    const navFilter =
+      event.target.closest(
+        ".desktop-nav [data-filter], .mobile-nav [data-filter]"
+      );
+
+    if (navFilter) {
+
+      activeFilter =
+        navFilter.dataset.filter || "all";
+
+      document
+        .querySelectorAll(".filter")
+        .forEach(button => {
+
+          button.classList.toggle(
+            "is-active",
+            button.dataset.filter ===
+              activeFilter
+          );
+
+        });
+
+      renderProducts();
+
+    }
+
+
+    /* WISHLIST */
+
+    const wish =
+      event.target.closest(
+        "[data-wishlist]"
+      );
+
+    if (wish) {
+
+      event.preventDefault();
+
+      toggleWishlist(
+        wish.dataset.wishlist
+      );
+
+      return;
+    }
+
+
+    /* ADD TO BAG */
+
+    const add =
+      event.target.closest(
+        "[data-add]"
+      );
+
+    if (add) {
+
+      event.preventDefault();
+
+      addToBag(add.dataset.add);
+
+      return;
+    }
+
+
+    /* QUANTITY */
+
+    const quantity =
+      event.target.closest(
+        "[data-quantity]"
+      );
+
+    if (quantity) {
+
+      event.preventDefault();
+
+      changeQuantity(
+        quantity.dataset.quantity,
+        Number(quantity.dataset.change)
+      );
+
+      return;
+    }
+
+
+    /* BAG */
+
+    if (
+      event.target.closest("#bagBtn")
+    ) {
+
+      renderBag();
+      openDrawer("bagDrawer");
+
+      return;
+    }
+
+
+    /* ACCOUNT */
+
+    if (
+      event.target.closest("#accountBtn")
+    ) {
+
+      renderAccount();
+      openDrawer("accountDrawer");
+
+      return;
+    }
+
+
+    /* SEARCH */
+
+    if (
+      event.target.closest("#searchBtn")
+    ) {
+
+      openDrawer("searchDrawer");
+
+      setTimeout(() => {
+
+        const input = $("searchInput");
+
+        if (input) input.focus();
+
+      }, 250);
+
+      return;
+    }
+
+
+    /* MOBILE MENU */
+
+    if (
+      event.target.closest("#menuBtn")
+    ) {
+
+      const nav = $("mobileNav");
+
+      if (nav) {
+
+        nav.classList.toggle("open");
+
+        nav.setAttribute(
+          "aria-hidden",
+          nav.classList.contains("open")
+            ? "false"
+            : "true"
+        );
+
+      }
+
+      return;
+    }
+
+
+    /* CLOSE */
+
+    if (
+      event.target.closest("[data-close]")
+    ) {
+
+      closeDrawers();
+      return;
+    }
+
+
+    if (
+      event.target.id === "overlay"
+    ) {
+
+      closeDrawers();
+      return;
+    }
+
+
+    /* CHECKOUT */
+
+    if (
+      event.target.closest("#checkoutButton")
+    ) {
+
+      window.location.href =
+        "/checkout.html";
+
+    }
+
+  }
+);
+
+
+/* =========================
+   SEARCH INPUT
+========================= */
+
+document.addEventListener(
+  "input",
+  event => {
+
+    if (
+      event.target.id === "searchInput"
+    ) {
+
+      searchProducts(
+        event.target.value
+      );
+
+    }
+
+  }
+);
+
+
+/* =========================
+   ESCAPE KEY
+========================= */
+
+document.addEventListener(
+  "keydown",
+  event => {
+
+    if (event.key === "Escape") {
+      closeDrawers();
+    }
+
+  }
+);
+
+
+/* =========================
+   INITIALISE
+========================= */
+
+renderBag();
+updateBagCount();
+loadProducts();
