@@ -3,870 +3,425 @@ import { supabase } from "./supabase.js";
 const app = document.getElementById("app");
 
 let products = [];
+let editingId = null;
 
-
-/* =========================
-   HELPERS
-========================= */
-
-function money(value) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0
-  }).format(Number(value) || 0);
-}
-
-function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[char]));
-}
-
-
-/* =========================
-   LOGIN SCREEN
-========================= */
-
-function showLogin(message = "") {
+function showLogin(error = "") {
   app.innerHTML = `
-    <section class="admin-login">
-
-      <div class="admin-login-inner">
-
-        <p class="eyebrow">AURENAR</p>
-
-        <h1>Admin</h1>
-
-        <p class="admin-muted">
-          Sign in to manage your collection.
-        </p>
+    <div class="admin-shell">
+      <div class="admin-card">
+        <div class="admin-brand">AURENAR</div>
+        <div class="admin-label">ADMIN</div>
 
         <form id="loginForm">
-
           <input
             id="email"
             type="email"
-            placeholder="Email address"
-            autocomplete="email"
+            placeholder="Email"
             required
-          >
+            autocomplete="email"
+          />
 
           <input
             id="password"
             type="password"
             placeholder="Password"
-            autocomplete="current-password"
             required
-          >
+            autocomplete="current-password"
+          />
 
-          <button
-            type="submit"
-            class="primary-btn"
-            id="loginButton"
-          >
-            SIGN IN
-          </button>
+          <button type="submit">Sign in</button>
 
-          <p
-            id="loginMessage"
-            class="form-message"
-          >
-            ${esc(message)}
+          <p id="loginMessage" class="admin-message">
+            ${error}
           </p>
-
         </form>
-
       </div>
-
-    </section>
+    </div>
   `;
 
   document
     .getElementById("loginForm")
-    ?.addEventListener("submit", login);
+    .addEventListener("submit", login);
 }
-
-
-/* =========================
-   LOGIN
-========================= */
 
 async function login(event) {
-
   event.preventDefault();
 
-  const email =
-    document.getElementById("email").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const message = document.getElementById("loginMessage");
 
-  const password =
-    document.getElementById("password").value;
+  message.textContent = "Signing in...";
 
-  const button =
-    document.getElementById("loginButton");
+  const { data, error } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-  const message =
-    document.getElementById("loginMessage");
-
-  button.disabled = true;
-  button.textContent = "SIGNING IN…";
-  message.textContent = "";
-
-  try {
-
-    const { data, error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data.session) {
-      throw new Error("Login session was not created.");
-    }
-
-    await checkAdmin();
-
-  } catch (error) {
-
-    console.error("Admin login error:", error);
-
-    message.textContent =
-      error?.message ||
-      "Unable to sign in.";
-
-    button.disabled = false;
-    button.textContent = "SIGN IN";
+  if (error) {
+    message.textContent = error.message;
+    return;
   }
+
+  if (!data.user) {
+    message.textContent = "Login succeeded, but no user was returned.";
+    return;
+  }
+
+  await verifyAdmin(data.user);
 }
 
+async function verifyAdmin(user) {
+  const message = document.getElementById("loginMessage");
 
-/* =========================
-   ADMIN CHECK
-========================= */
-
-async function checkAdmin() {
-
-  const {
-    data: sessionData,
-    error: sessionError
-  } = await supabase.auth.getSession();
-
-  if (sessionError) {
-    await supabase.auth.signOut();
-    showLogin(sessionError.message);
-    return;
+  if (message) {
+    message.textContent = "Verifying admin...";
   }
 
-  const session = sessionData.session;
-
-  if (!session) {
-    showLogin();
-    return;
-  }
-
-
-  const {
-    data: profile,
-    error
-  } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
-    .select("role")
-    .eq("id", session.user.id)
+    .select("id, role")
+    .eq("id", user.id)
     .maybeSingle();
 
   if (error) {
-
-    console.error("Admin role check:", error);
+    console.error("Admin verification error:", error);
 
     await supabase.auth.signOut();
 
-    showLogin(
-      "Could not verify admin access."
-    );
+    if (message) {
+      message.textContent =
+        "Admin verification failed: " + error.message;
+    }
 
     return;
   }
 
-
-  if (!profile || profile.role !== "admin") {
-
+  if (!data || data.role !== "admin") {
     await supabase.auth.signOut();
 
-    showLogin(
-      "This account does not have admin access."
-    );
+    if (message) {
+      message.textContent = "This account is not an admin.";
+    }
 
     return;
   }
 
-
-  showDashboard();
+  await dashboard();
 }
 
-
-/* =========================
-   DASHBOARD
-========================= */
-
-function showDashboard() {
-
-  app.innerHTML = `
-    <section class="admin-page">
-
-      <header class="admin-top">
-
-        <div>
-          <p class="eyebrow">AURENAR</p>
-          <h1>Store Admin</h1>
-        </div>
-
-        <button
-          class="secondary-btn"
-          id="logout"
-        >
-          SIGN OUT
-        </button>
-
-      </header>
-
-
-      <section class="admin-content">
-
-        <div class="admin-heading">
-
-          <div>
-            <p class="eyebrow">COLLECTION</p>
-            <h2>Products</h2>
-          </div>
-
-          <button
-            class="primary-btn"
-            id="addProduct"
-          >
-            ADD PRODUCT
-          </button>
-
-        </div>
-
-
-        <div id="productList">
-          <p class="admin-muted">
-            Loading products…
-          </p>
-        </div>
-
-      </section>
-
-    </section>
-  `;
-
-
-  document
-    .getElementById("logout")
-    ?.addEventListener("click", async () => {
-
-      await supabase.auth.signOut();
-
-      showLogin();
-    });
-
-
-  document
-    .getElementById("addProduct")
-    ?.addEventListener(
-      "click",
-      () => showProductForm()
-    );
-
-
-  loadProducts();
-}
-
-
-/* =========================
-   LOAD PRODUCTS
-========================= */
-
-async function loadProducts() {
-
-  const list =
-    document.getElementById("productList");
-
-  if (!list) return;
-
-
-  const {
-    data,
-    error
-  } = await supabase
+async function dashboard() {
+  const { data, error } = await supabase
     .from("products")
     .select("*")
-    .order("created_at", {
-      ascending: false
-    });
-
+    .order("created_at", { ascending: false });
 
   if (error) {
-
     console.error(error);
-
-    list.innerHTML = `
-      <p class="form-message">
-        ${esc(error.message)}
-      </p>
-    `;
-
-    return;
-  }
-
-
-  products = data || [];
-
-  renderProducts();
-}
-
-
-/* =========================
-   PRODUCT LIST
-========================= */
-
-function renderProducts() {
-
-  const list =
-    document.getElementById("productList");
-
-  if (!list) return;
-
-
-  if (!products.length) {
-
-    list.innerHTML = `
-      <div class="admin-empty">
-        <p>No products yet.</p>
-
-        <button
-          class="primary-btn"
-          id="emptyAdd"
-        >
-          ADD YOUR FIRST PRODUCT
-        </button>
+    app.innerHTML = `
+      <div class="admin-shell">
+        <div class="admin-card">
+          <h2>Admin Dashboard</h2>
+          <p>Products could not be loaded.</p>
+          <p>${error.message}</p>
+          <button id="logout">Log out</button>
+        </div>
       </div>
     `;
 
     document
-      .getElementById("emptyAdd")
-      ?.addEventListener(
-        "click",
-        () => showProductForm()
-      );
+      .getElementById("logout")
+      .addEventListener("click", logout);
 
     return;
   }
 
+  products = data || [];
+  renderDashboard();
+}
 
-  list.innerHTML = `
-    <div class="admin-products">
+function renderDashboard() {
+  app.innerHTML = `
+    <div class="admin-shell">
+      <div class="admin-header">
+        <div>
+          <div class="admin-brand">AURENAR</div>
+          <div class="admin-label">ADMIN</div>
+        </div>
 
-      ${products.map(product => {
+        <button id="logout">Log out</button>
+      </div>
 
-        const image =
-          Array.isArray(product.images)
-            ? product.images[0]
-            : "";
+      <div class="admin-content">
+        <div class="admin-top">
+          <h1>Products</h1>
+          <button id="addProduct">Add product</button>
+        </div>
 
-        return `
-          <article class="admin-product">
-
-            <div class="admin-product-image">
-
-              ${
-                image
-                  ? `
-                    <img
-                      src="${esc(image)}"
-                      alt="${esc(product.name)}"
-                    >
-                  `
-                  : `
-                    <span>AURENAR</span>
-                  `
-              }
-
-            </div>
-
-
-            <div class="admin-product-info">
-
-              <div>
-
-                <h3>
-                  ${esc(product.name)}
-                </h3>
-
-                <p>
-                  ${money(product.price)}
-                </p>
-
-                <small>
-                  Stock: ${Number(product.stock || 0)}
-                  ·
-                  ${
-                    product.is_active
-                      ? "Active"
-                      : "Hidden"
-                  }
-                </small>
-
-              </div>
-
-
-              <div class="admin-product-actions">
-
-                <button
-                  class="secondary-btn"
-                  data-edit="${esc(product.id)}"
-                >
-                  EDIT
-                </button>
-
-                <button
-                  class="secondary-btn"
-                  data-delete="${esc(product.id)}"
-                >
-                  DELETE
-                </button>
-
-              </div>
-
-            </div>
-
-          </article>
-        `;
-
-      }).join("")}
-
+        <div id="productList">
+          ${
+            products.length
+              ? products.map(productCard).join("")
+              : "<p>No products yet.</p>"
+          }
+        </div>
+      </div>
     </div>
   `;
 
+  document
+    .getElementById("logout")
+    .addEventListener("click", logout);
 
-  list
-    .querySelectorAll("[data-edit]")
-    .forEach(button => {
+  document
+    .getElementById("addProduct")
+    .addEventListener("click", () => openProductForm());
 
-      button.addEventListener(
-        "click",
-        () => {
-
-          const product =
-            products.find(
-              item =>
-                String(item.id) ===
-                String(button.dataset.edit)
-            );
-
-          if (product) {
-            showProductForm(product);
-          }
-        }
-      );
-
+  document.querySelectorAll("[data-edit]").forEach(button => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.edit;
+      const product = products.find(p => p.id === id);
+      if (product) openProductForm(product);
     });
+  });
 
-
-  list
-    .querySelectorAll("[data-delete]")
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => deleteProduct(button.dataset.delete)
-      );
-
+  document.querySelectorAll("[data-delete]").forEach(button => {
+    button.addEventListener("click", () => {
+      deleteProduct(button.dataset.delete);
     });
+  });
 }
 
+function productCard(product) {
+  return `
+    <div class="admin-product">
+      <div>
+        <strong>${escapeHtml(product.name)}</strong>
+        <div>₹${Number(product.price).toLocaleString("en-IN")}</div>
+        <small>
+          Stock: ${product.stock ?? 0}
+          · ${product.is_active ? "Active" : "Hidden"}
+        </small>
+      </div>
 
-/* =========================
-   PRODUCT FORM
-========================= */
+      <div>
+        <button data-edit="${product.id}">Edit</button>
+        <button data-delete="${product.id}">Delete</button>
+      </div>
+    </div>
+  `;
+}
 
-function showProductForm(product = null) {
-
-  const editing = Boolean(product);
-
+function openProductForm(product = null) {
+  editingId = product?.id || null;
 
   app.innerHTML = `
-    <section class="admin-page">
+    <div class="admin-shell">
+      <div class="admin-content">
+        <h1>${product ? "Edit product" : "Add product"}</h1>
 
-      <header class="admin-top">
+        <form id="productForm">
+          <input
+            name="name"
+            placeholder="Product name"
+            value="${escapeAttr(product?.name || "")}"
+            required
+          />
 
-        <div>
-          <p class="eyebrow">AURENAR</p>
+          <input
+            name="slug"
+            placeholder="Slug"
+            value="${escapeAttr(product?.slug || "")}"
+            required
+          />
 
-          <h1>
-            ${editing ? "Edit Product" : "Add Product"}
-          </h1>
-        </div>
+          <textarea
+            name="description"
+            placeholder="Description"
+          >${escapeHtml(product?.description || "")}</textarea>
 
-        <button
-          class="secondary-btn"
-          id="back"
-        >
-          BACK
-        </button>
+          <input
+            name="price"
+            type="number"
+            step="0.01"
+            placeholder="Price"
+            value="${product?.price ?? ""}"
+            required
+          />
 
-      </header>
+          <input
+            name="compare_at_price"
+            type="number"
+            step="0.01"
+            placeholder="Compare at price"
+            value="${product?.compare_at_price ?? ""}"
+          />
 
+          <input
+            name="images"
+            placeholder="Image URLs, separated by commas"
+            value="${escapeAttr(
+              Array.isArray(product?.images)
+                ? product.images.join(", ")
+                : ""
+            )}"
+          />
 
-      <section class="admin-form-wrap">
+          <input
+            name="sizes"
+            placeholder="Sizes, e.g. S, M, L, XL"
+            value="${escapeAttr(
+              Array.isArray(product?.sizes)
+                ? product.sizes.join(", ")
+                : ""
+            )}"
+          />
 
-        <form
-          id="productForm"
-          class="admin-form"
-        >
-
-          <label>
-            PRODUCT NAME
-
-            <input
-              name="name"
-              required
-              value="${esc(product?.name || "")}"
-            >
-          </label>
-
-
-          <label>
-            SLUG
-
-            <input
-              name="slug"
-              required
-              value="${esc(product?.slug || "")}"
-              placeholder="white-linen-shirt"
-            >
-          </label>
-
-
-          <label>
-            DESCRIPTION
-
-            <textarea
-              name="description"
-              rows="5"
-            >${esc(product?.description || "")}</textarea>
-          </label>
-
-
-          <div class="two-col">
-
-            <label>
-              PRICE
-
-              <input
-                name="price"
-                type="number"
-                min="0"
-                step="1"
-                required
-                value="${product?.price ?? ""}"
-              >
-            </label>
-
-
-            <label>
-              COMPARE AT PRICE
-
-              <input
-                name="compare_at_price"
-                type="number"
-                min="0"
-                step="1"
-                value="${product?.compare_at_price ?? ""}"
-              >
-            </label>
-
-          </div>
-
+          <input
+            name="stock"
+            type="number"
+            placeholder="Stock"
+            value="${product?.stock ?? 0}"
+            required
+          />
 
           <label>
-            IMAGE URL
-
-            <input
-              name="image"
-              type="url"
-              placeholder="https://..."
-              value="${
-                Array.isArray(product?.images)
-                  ? esc(product.images[0] || "")
-                  : ""
-              }"
-            >
-          </label>
-
-
-          <label>
-            SIZES
-
-            <input
-              name="sizes"
-              placeholder="S, M, L, XL"
-              value="${
-                Array.isArray(product?.sizes)
-                  ? esc(product.sizes.join(", "))
-                  : ""
-              }"
-            >
-          </label>
-
-
-          <label>
-            STOCK
-
-            <input
-              name="stock"
-              type="number"
-              min="0"
-              step="1"
-              required
-              value="${product?.stock ?? 0}"
-            >
-          </label>
-
-
-          <label class="checkbox-label">
-
             <input
               name="is_active"
               type="checkbox"
-              ${
-                product?.is_active !== false
-                  ? "checked"
-                  : ""
-              }
-            >
-
-            SHOW PRODUCT ON STORE
-
+              ${product?.is_active !== false ? "checked" : ""}
+            />
+            Active
           </label>
 
-
-          <p
-            id="formMessage"
-            class="form-message"
-          ></p>
-
-
-          <button
-            type="submit"
-            class="primary-btn"
-            id="saveProduct"
-          >
-            ${editing ? "SAVE CHANGES" : "ADD PRODUCT"}
+          <button type="submit">
+            ${product ? "Save changes" : "Create product"}
           </button>
 
+          <button type="button" id="cancel">
+            Cancel
+          </button>
+
+          <p id="formMessage"></p>
         </form>
-
-      </section>
-
-    </section>
+      </div>
+    </div>
   `;
 
-
   document
-    .getElementById("back")
-    ?.addEventListener(
-      "click",
-      () => showDashboard()
-    );
-
+    .getElementById("cancel")
+    .addEventListener("click", renderDashboard);
 
   document
     .getElementById("productForm")
-    ?.addEventListener(
-      "submit",
-      event =>
-        saveProduct(event, product)
-    );
+    .addEventListener("submit", saveProduct);
 }
 
-
-/* =========================
-   SAVE PRODUCT
-========================= */
-
-async function saveProduct(event, existing) {
-
+async function saveProduct(event) {
   event.preventDefault();
 
+  const form = new FormData(event.target);
+  const message = document.getElementById("formMessage");
 
-  const form =
-    event.currentTarget;
-
-  const button =
-    document.getElementById("saveProduct");
-
-  const message =
-    document.getElementById("formMessage");
-
-
-  const data =
-    new FormData(form);
-
-
-  const name =
-    String(data.get("name") || "").trim();
-
-  const slug =
-    String(data.get("slug") || "").trim();
-
-  const description =
-    String(data.get("description") || "").trim();
-
-  const price =
-    Number(data.get("price") || 0);
-
-  const compare =
-    Number(data.get("compare_at_price") || 0);
-
-  const image =
-    String(data.get("image") || "").trim();
-
-  const sizes =
-    String(data.get("sizes") || "")
-      .split(",")
-      .map(size => size.trim())
-      .filter(Boolean);
-
-  const stock =
-    Number(data.get("stock") || 0);
-
-  const isActive =
-    data.get("is_active") === "on";
-
-
-  button.disabled = true;
-  button.textContent = "SAVING…";
-  message.textContent = "";
-
+  const name = form.get("name").trim();
+  const slug = form.get("slug").trim();
+  const description = form.get("description").trim();
+  const price = Number(form.get("price"));
+  const compare = form.get("compare_at_price");
+  const images = form
+    .get("images")
+    .split(",")
+    .map(x => x.trim())
+    .filter(Boolean);
+  const sizes = form
+    .get("sizes")
+    .split(",")
+    .map(x => x.trim())
+    .filter(Boolean);
+  const stock = Number(form.get("stock"));
+  const is_active = form.get("is_active") === "on";
 
   const payload = {
     name,
     slug,
     description,
     price,
-    compare_at_price:
-      compare > 0 ? compare : null,
-    images:
-      image ? [image] : [],
+    compare_at_price: compare ? Number(compare) : null,
+    images,
     sizes,
     stock,
-    is_active: isActive,
+    is_active,
     updated_at: new Date().toISOString()
   };
 
+  message.textContent = "Saving...";
 
-  try {
+  let result;
 
-    let result;
-
-
-    if (existing) {
-
-      result =
-        await supabase
-          .from("products")
-          .update(payload)
-          .eq("id", existing.id);
-
-    } else {
-
-      result =
-        await supabase
-          .from("products")
-          .insert(payload);
-
-    }
-
-
-    if (result.error) {
-      throw result.error;
-    }
-
-
-    showDashboard();
-
-  } catch (error) {
-
-    console.error(error);
-
-    message.textContent =
-      error?.message ||
-      "Unable to save product.";
-
-    button.disabled = false;
-
-    button.textContent =
-      existing
-        ? "SAVE CHANGES"
-        : "ADD PRODUCT";
+  if (editingId) {
+    result = await supabase
+      .from("products")
+      .update(payload)
+      .eq("id", editingId);
+  } else {
+    result = await supabase
+      .from("products")
+      .insert(payload);
   }
+
+  if (result.error) {
+    message.textContent = result.error.message;
+    return;
+  }
+
+  editingId = null;
+  await dashboard();
 }
 
-
-/* =========================
-   DELETE PRODUCT
-========================= */
-
 async function deleteProduct(id) {
+  if (!confirm("Delete this product?")) return;
 
-  const product =
-    products.find(
-      item =>
-        String(item.id) === String(id)
-    );
-
-  if (!product) return;
-
-
-  const confirmed =
-    window.confirm(
-      `Delete "${product.name}"?`
-    );
-
-  if (!confirmed) return;
-
-
-  const {
-    error
-  } = await supabase
+  const { error } = await supabase
     .from("products")
     .delete()
     .eq("id", id);
 
-
   if (error) {
-
-    window.alert(error.message);
-
+    alert(error.message);
     return;
   }
 
-
-  await loadProducts();
+  await dashboard();
 }
 
+async function logout() {
+  await supabase.auth.signOut();
+  showLogin();
+}
 
-/* =========================
-   START
-========================= */
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-checkAdmin();
+function escapeAttr(value) {
+  return escapeHtml(value);
+}
+
+async function start() {
+  const { data } = await supabase.auth.getSession();
+
+  if (!data.session) {
+    showLogin();
+    return;
+  }
+
+  await verifyAdmin(data.session.user);
+}
+
+start();
