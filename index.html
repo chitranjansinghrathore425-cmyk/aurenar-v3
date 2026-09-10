@@ -1,92 +1,79 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AURENAR — Modern Essentials</title>
-  <meta name="description" content="AURENAR creates refined modern essentials with clean silhouettes, considered materials and timeless restraint.">
-  <meta property="og:title" content="AURENAR — Modern Essentials">
-  <meta property="og:description" content="Quietly distinct. Modern essentials by AURENAR.">
-  <meta property="og:type" content="website">
-  <meta name="theme-color" content="#f6f6f4">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <script type="module" src="/store.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AURENAR — Modern Menswear</title>
+<style>
+:root{--bg:#f4f1eb;--ink:#171614;--muted:#77736d;--line:#d8d3ca;--card:#ebe7df}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}a{text-decoration:none;color:inherit}
+header{position:sticky;top:0;z-index:5;background:rgba(244,241,235,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:20px 5vw}
+.logo{font:700 24px Georgia,serif;letter-spacing:.16em}.nav{display:flex;gap:24px;font-size:13px;text-transform:uppercase;letter-spacing:.1em}.icons{display:flex;gap:14px;align-items:center}.iconbtn{border:0;background:none;font-size:20px;cursor:pointer}
+.hero{min-height:72vh;padding:9vw 5vw;display:flex;align-items:end;background:linear-gradient(120deg,#ddd7cd,#f4f1eb 55%,#cbc4ba)}
+.hero h1{font:400 clamp(58px,11vw,150px)/.86 Georgia,serif;letter-spacing:-.05em;margin:0;max-width:850px}.hero p{max-width:420px;color:#5f5b55;line-height:1.6}
+.section{padding:90px 5vw}.sectionhead{display:flex;justify-content:space-between;align-items:end;margin-bottom:35px}.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.product{position:relative}.photo{aspect-ratio:4/5;background:var(--card);display:flex;align-items:center;justify-content:center;color:#9a958d;overflow:hidden}.photo img{width:100%;height:100%;object-fit:cover}.pinfo{padding:14px 2px}.pname{font:400 21px Georgia,serif}.price{margin-top:7px;color:#555;font-size:14px}.heart{position:absolute;right:14px;top:14px;width:36px;height:36px;border:0;border-radius:50%;background:#f4f1ebcc;cursor:pointer;font-size:19px}.heart.active{background:#171614;color:#fff}
+.add{margin-top:12px;width:100%;padding:12px;border:1px solid #222;background:transparent;cursor:pointer;text-transform:uppercase;letter-spacing:.1em;font-size:11px}.add:hover{background:#171614;color:#fff}
+.manifesto{padding:110px 5vw;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.manifesto h2{font:400 clamp(35px,6vw,76px)/1.05 Georgia,serif;max-width:850px;margin:0}
+.about{max-width:800px}.about p{font:22px/1.6 Georgia,serif;color:#4f4b45}
+footer{padding:45px 5vw;display:flex;justify-content:space-between;color:#666;font-size:12px}
+.drawer,.admin{position:fixed;inset:0;background:#0006;z-index:20;display:none}.panel{margin-left:auto;width:min(470px,100%);height:100%;background:var(--bg);padding:28px;overflow:auto}.drawer.open,.admin.open{display:block}
+.close{border:0;background:none;font-size:24px;float:right;cursor:pointer}.cartrow{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:18px 0}.qty button{border:1px solid var(--line);background:none;padding:4px 9px}.checkout{width:100%;padding:15px;background:#171614;color:#fff;border:0;margin-top:20px;text-transform:uppercase;letter-spacing:.12em}
+.admin .panel{width:min(700px,100%)}input,textarea,select{width:100%;padding:12px;margin:7px 0 14px;border:1px solid var(--line);background:#fff}.admin h2{font:400 34px Georgia,serif}.adminrow{border-bottom:1px solid var(--line);padding:15px 0}.danger{background:#a22;color:#fff;border:0;padding:7px 10px}
+@media(max-width:700px){.nav{display:none}.grid{grid-template-columns:1fr 1fr}.hero{min-height:65vh}.pname{font-size:17px}.section{padding:65px 5vw}}
+</style>
 </head>
 <body>
-  <div class="announcement">Complimentary shipping on orders over ₹2,500</div>
-  <header class="site-header" id="siteHeader">
-    <button class="mobile-menu" id="menuBtn" aria-label="Open menu"><span></span><span></span></button>
-    <a class="wordmark" href="/" aria-label="AURENAR home">AURENAR</a>
-    <nav class="desktop-nav" aria-label="Primary navigation">
-      <a href="#shop">SHOP</a><a href="#shop" data-filter="women">WOMEN</a><a href="#shop" data-filter="men">MEN</a><a href="#collections">COLLECTIONS</a>
-    </nav>
-    <div class="header-actions">
-      <button class="text-action" id="searchBtn">SEARCH</button>
-      <button class="text-action" id="accountBtn">ACCOUNT</button>
-      <button class="text-action bag-action" id="bagBtn">BAG (<span id="bagCount">0</span>)</button>
-    </div>
-  </header>
-  <div class="mobile-nav" id="mobileNav" aria-hidden="true">
-    <a href="#shop">SHOP</a><a href="#shop" data-filter="women">WOMEN</a><a href="#shop" data-filter="men">MEN</a><a href="#collections">COLLECTIONS</a><a href="#about">ABOUT</a>
-  </div>
+<header>
+  <a class="logo" href="#">AURENAR</a>
+  <nav class="nav"><a href="#shop">Shop</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
+  <div class="icons"><button class="iconbtn" onclick="openAdmin()" aria-label="Admin">⚙</button><button class="iconbtn" onclick="openCart()" aria-label="Cart">🛒 <span id="count">0</span></button></div>
+</header>
 
-  <main>
-    <section class="hero" aria-label="AURENAR introduction">
-      <div class="hero-image" role="img" aria-label="Editorial neutral fashion image"></div>
-      <div class="hero-copy">
-        <p class="eyebrow">AURENAR / COLLECTION 01</p>
-        <h1>Quietly<br><em>distinct.</em></h1>
-        <p class="hero-lede">Refined essentials shaped by clean lines, considered materials and an instinct for restraint.</p>
-        <a class="line-link" href="#shop">EXPLORE THE COLLECTION <span>↗</span></a>
-      </div>
-    </section>
+<section class="hero"><div><div class="eyebrow">Collection 01 — Modern Menswear</div><h1>Quietly<br>Distinct.</h1><p>AURENAR creates refined essentials with a restrained, contemporary character.</p></div></section>
 
-    <section class="intro-strip" id="collections">
-      <p class="eyebrow">THE AURENAR STANDARD</p>
-      <p>Modern clothing, edited with intention.</p>
-    </section>
+<section class="section" id="shop">
+<div class="sectionhead"><div><div class="eyebrow">The Collection</div><h2 style="font:400 40px Georgia,serif;margin:8px 0">Collection 01</h2></div></div>
+<div class="grid" id="products"></div>
+</section>
 
-    <section class="collection-editorial">
-      <div class="editorial-panel editorial-panel--large"><div class="editorial-label"><span>01</span><strong>THE NEW ESSENTIALS</strong><span>VIEW</span></div></div>
-      <div class="editorial-panel editorial-panel--small"><div class="editorial-label"><span>02</span><strong>FORM / FUNCTION</strong><span>VIEW</span></div></div>
-    </section>
+<section class="manifesto"><div class="eyebrow">AURENAR</div><h2>Elegance doesn't ask for attention. It earns it.</h2></section>
+<section class="section about" id="about"><div class="eyebrow">About</div><p>AURENAR is a modern menswear label built around clean silhouettes, considered materials and timeless restraint.</p></section>
+<footer id="contact"><span>© 2026 AURENAR</span><span>Contact · Instagram</span></footer>
 
-    <section class="products-section" id="shop">
-      <div class="section-head">
-        <div><p class="eyebrow">SHOP AURENAR</p><h2>Selected pieces</h2></div>
-        <div class="filter-row" role="group" aria-label="Product filters">
-          <button class="filter is-active" data-filter="all">ALL</button><button class="filter" data-filter="women">WOMEN</button><button class="filter" data-filter="men">MEN</button>
-        </div>
-      </div>
-      <div class="status" id="productStatus" aria-live="polite">Loading collection…</div>
-      <div class="product-grid" id="products"></div>
-    </section>
+<div class="drawer" id="cartDrawer" onclick="if(event.target===this)closeCart()"><div class="panel"><button class="close" onclick="closeCart()">×</button><h2 style="font:400 34px Georgia,serif">Your Cart</h2><div id="cart"></div><div id="total" style="margin-top:25px;font-size:18px"></div><button class="checkout" onclick="alert('Checkout will be connected to a real payment gateway in the production version.')">Proceed to Checkout</button></div></div>
 
-    <section class="manifesto">
-      <p class="eyebrow">AURENAR / PHILOSOPHY</p>
-      <h2>Elegance doesn't ask for attention.<br><em>It earns it.</em></h2>
-    </section>
+<div class="admin" id="adminDrawer" onclick="if(event.target===this)closeAdmin()"><div class="panel"><button class="close" onclick="closeAdmin()">×</button><h2>Store Editor</h2><p style="color:#666">Demo editor: products are saved in this browser. A real multi-device admin/database will be connected in the production build.</p>
+<h3>Add product</h3>
+<input id="pn" placeholder="Product name"><input id="pp" type="number" placeholder="Price (₹)"><input id="pi" placeholder="Image URL (optional)"><input id="ps" placeholder="Sizes e.g. S,M,L,XL"><textarea id="pd" placeholder="Description"></textarea><button class="checkout" onclick="addProduct()">Add Product</button>
+<h3 style="margin-top:35px">Current products</h3><div id="adminProducts"></div></div></div>
 
-    <section class="about-section" id="about">
-      <div><p class="eyebrow">ABOUT AURENAR</p></div>
-      <div><p class="about-lede">A modern clothing label built around clean silhouettes, considered materials and timeless restraint.</p><p class="about-copy">We believe the strongest wardrobe is edited, not crowded. Every AURENAR piece is designed to live beyond a season — quiet enough for everyday life, distinctive enough to be remembered.</p></div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="footer-brand"><a class="wordmark wordmark--footer" href="/">AURENAR</a><p>Timeless design. Modern identity. Made to last.</p></div>
-    <div class="footer-links"><div><p class="eyebrow">EXPLORE</p><a href="#shop">Shop</a><a href="#collections">Collections</a><a href="#about">About</a></div><div><p class="eyebrow">CONNECT</p><a href="mailto:hello@aurenar.com">Email</a><a href="#" aria-label="Instagram placeholder">Instagram</a></div></div>
-    <div class="footer-bottom"><span>© 2026 AURENAR</span><span>Made with restraint.</span></div>
-  </footer>
-
-  <div class="overlay" id="overlay" hidden></div>
-  <aside class="drawer" id="bagDrawer" aria-hidden="true" aria-label="Shopping bag"><div class="drawer-head"><h2>Your bag</h2><button class="close-btn" data-close="bagDrawer" aria-label="Close bag">×</button></div><div class="drawer-body" id="bagBody"></div><div class="drawer-foot" id="bagFoot"></div></aside>
-  <aside class="drawer drawer--wide" id="accountDrawer" aria-hidden="true" aria-label="Account"><div class="drawer-head"><h2>Account</h2><button class="close-btn" data-close="accountDrawer" aria-label="Close account">×</button></div><div class="drawer-body" id="accountBody"></div></aside>
-  <aside class="drawer drawer--wide" id="searchDrawer" aria-hidden="true" aria-label="Search"><div class="drawer-head"><h2>Search</h2><button class="close-btn" data-close="searchDrawer" aria-label="Close search">×</button></div><div class="search-wrap"><input id="searchInput" type="search" placeholder="Search the collection" autocomplete="off"><div id="searchResults"></div></div></aside>
-  <aside class="drawer drawer--checkout" id="checkoutDrawer" aria-hidden="true" aria-label="Checkout"><div class="drawer-head"><h2>Checkout</h2><button class="close-btn" data-close="checkoutDrawer" aria-label="Close checkout">×</button></div><div class="drawer-body"><form id="checkoutForm" class="checkout-form"><p class="eyebrow">CONTACT</p><input required name="email" type="email" placeholder="Email address"><p class="eyebrow">SHIPPING ADDRESS</p><div class="two-col"><input required name="firstName" placeholder="First name"><input required name="lastName" placeholder="Last name"></div><input required name="address" placeholder="Address"><div class="two-col"><input required name="city" placeholder="City"><input required name="postal" inputmode="numeric" placeholder="PIN code"></div><input name="phone" inputmode="tel" placeholder="Phone number"><div class="checkout-summary" id="checkoutSummary"></div><div class="payment-note"><strong>Payment</strong><p>Online payment is not connected yet. This checkout is ready for Razorpay or Stripe integration, but no payment will be processed in V3.</p></div><button type="submit" class="primary-btn" disabled>PAYMENT — COMING SOON</button></form></div></aside>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-</body>
-</html>
+<script>
+const defaultProducts=[
+{id:1,name:"White Linen Shirt",price:1499,img:"",sizes:"S,M,L,XL",desc:"A clean linen essential."},
+{id:2,name:"Noir Overshirt",price:1899,img:"",sizes:"S,M,L,XL",desc:"A structured everyday layer."},
+{id:3,name:"Stone Trousers",price:1799,img:"",sizes:"30,32,34,36",desc:"Relaxed tailored trousers."}
+];
+let products=JSON.parse(localStorage.getItem("aurenar_products")||"null")||defaultProducts;
+let cart=JSON.parse(localStorage.getItem("aurenar_cart")||"[]");
+let wish=JSON.parse(localStorage.getItem("aurenar_wish")||"[]");
+function money(n){return "₹"+Number(n).toLocaleString("en-IN")}
+function save(){localStorage.setItem("aurenar_products",JSON.stringify(products));localStorage.setItem("aurenar_cart",JSON.stringify(cart));localStorage.setItem("aurenar_wish",JSON.stringify(wish))}
+function render(){
+document.getElementById("products").innerHTML=products.map(p=>`<article class="product"><button class="heart ${wish.includes(p.id)?"active":""}" onclick="toggleWish(${p.id})">♡</button><div class="photo">${p.img?`<img src="${p.img}" alt="${p.name}">`:`<span>AURENAR</span>`}</div><div class="pinfo"><div class="pname">${p.name}</div><div class="price">${money(p.price)}</div><button class="add" onclick="addCart(${p.id})">Add to cart</button></div></article>`).join("");
+document.getElementById("count").textContent=cart.reduce((a,x)=>a+x.qty,0);renderCart();renderAdmin();
+}
+function toggleWish(id){wish=wish.includes(id)?wish.filter(x=>x!==id):[...wish,id];save();render()}
+function addCart(id){let x=cart.find(i=>i.id===id);x?x.qty++:cart.push({id,qty:1});save();render();openCart()}
+function changeQty(id,d){let x=cart.find(i=>i.id===id);if(!x)return;x.qty+=d;if(x.qty<=0)cart=cart.filter(i=>i.id!==id);save();render()}
+function renderCart(){let c=document.getElementById("cart");if(!cart.length){c.innerHTML="<p style='color:#777'>Your cart is empty.</p>";document.getElementById("total").textContent="";return}let total=0;c.innerHTML=cart.map(x=>{let p=products.find(y=>y.id===x.id);total+=p.price*x.qty;return `<div class="cartrow"><div>${p.name}<br><small>${money(p.price)} × ${x.qty}</small></div><div class="qty"><button onclick="changeQty(${p.id},-1)">−</button> ${x.qty} <button onclick="changeQty(${p.id},1)">+</button></div></div>`}).join("");document.getElementById("total").textContent="Total: "+money(total)}
+function renderAdmin(){document.getElementById("adminProducts").innerHTML=products.map(p=>`<div class="adminrow"><strong>${p.name}</strong> — ${money(p.price)}<br><small>Sizes: ${p.sizes||"—"}</small><br><button class="danger" style="margin-top:8px" onclick="deleteProduct(${p.id})">Delete</button></div>`).join("")}
+function addProduct(){let name=document.getElementById("pn").value.trim(),price=Number(document.getElementById("pp").value),img=document.getElementById("pi").value.trim(),sizes=document.getElementById("ps").value.trim(),desc=document.getElementById("pd").value.trim();if(!name||!price){alert("Enter product name and price.");return}products.push({id:Date.now(),name,price,img,sizes,desc});save();["pn","pp","pi","ps","pd"].forEach(id=>document.getElementById(id).value="");render()}
+function deleteProduct(id){if(confirm("Delete this product?")){products=products.filter(p=>p.id!==id);cart=cart.filter(x=>x.id!==id);wish=wish.filter(x=>x!==id);save();render()}}
+function openCart(){document.getElementById("cartDrawer").classList.add("open")}
+function closeCart(){document.getElementById("cartDrawer").classList.remove("open")}
+function openAdmin(){document.getElementById("adminDrawer").classList.add("open")}
+function closeAdmin(){document.getElementById("adminDrawer").classList.remove("open")}
+render();
+</script>
+</body></html>
