@@ -1,1 +1,210 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AURENAR — Admin</title><meta name="robots" content="noindex,nofollow"><link rel="stylesheet" href="/assets/styles.css"><script type="module" src="/assets/admin.js"></script></head><body><div id="app"></div></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AURENAR — Modern Essentials</title>
+<meta name="description" content="AURENAR — Modern essentials, quietly distinct.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script type="module" src="/store.js"></script>
+</head>
+
+<body>
+
+<div class="announcement">
+  Complimentary shipping on orders over ₹2,500
+</div>
+
+<header class="site-header">
+  <a class="brand" href="/">AURENAR</a>
+
+  <nav class="desktop-nav">
+    <a href="#shop">SHOP</a>
+    <a href="#women">WOMEN</a>
+    <a href="#men">MEN</a>
+    <a href="#collections">COLLECTIONS</a>
+  </nav>
+
+  <div class="header-actions">
+    <button id="searchBtn" type="button">SEARCH</button>
+    <button id="accountBtn" type="button">ACCOUNT</button>
+    <button id="bagBtn" type="button">
+      BAG <span id="bagCount">0</span>
+    </button>
+  </div>
+
+  <button class="mobile-menu" id="mobileMenuBtn" type="button">MENU</button>
+</header>
+
+<nav class="mobile-nav" id="mobileNav">
+  <a href="#shop">SHOP</a>
+  <a href="#women">WOMEN</a>
+  <a href="#men">MEN</a>
+  <a href="#collections">COLLECTIONS</a>
+  <button id="mobileSearchBtn" type="button">SEARCH</button>
+  <button id="mobileAccountBtn" type="button">ACCOUNT</button>
+</nav>
+
+<main>
+
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">AURENAR / COLLECTION 01</p>
+    <h1>Quietly<br>distinct.</h1>
+    <p>
+      Modern essentials designed with restraint,
+      precision and an enduring sense of ease.
+    </p>
+    <a class="primary" href="#shop">SHOP COLLECTION</a>
+  </div>
+</section>
+
+<section class="standard" id="collections">
+  <div>
+    <p class="eyebrow">THE AURENAR STANDARD</p>
+    <h2>Less noise.<br>More presence.</h2>
+  </div>
+
+  <p class="standard-text">
+    AURENAR is built around considered silhouettes,
+    refined materials and understated details.
+    Pieces designed to become part of your everyday,
+    not disappear with the season.
+  </p>
+</section>
+
+<section class="editorial">
+  <div class="editorial-panel">
+    <div class="editorial-image">AURENAR</div>
+    <div class="editorial-copy">
+      <p class="eyebrow">01 / FORM</p>
+      <h2>Designed<br>with intent.</h2>
+    </div>
+  </div>
+
+  <div class="editorial-panel reverse">
+    <div class="editorial-image">AURENAR</div>
+    <div class="editorial-copy">
+      <p class="eyebrow">02 / MATERIAL</p>
+      <h2>Quiet luxury,<br>made tangible.</h2>
+    </div>
+  </div>
+</section>
+
+<section class="shop-section" id="shop">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">COLLECTION 01</p>
+      <h2>Modern Essentials</h2>
+    </div>
+    <p id="productStatus">Loading collection...</p>
+  </div>
+
+  <div class="product-grid" id="products">
+    <div class="loading">Loading...</div>
+  </div>
+</section>
+
+<section class="manifesto">
+  <p class="eyebrow">THE AURENAR MANIFESTO</p>
+  <h2>“Elegance doesn't ask for attention.<br>It earns it.”</h2>
+</section>
+
+<section class="about" id="about">
+  <div>
+    <p class="eyebrow">ABOUT AURENAR</p>
+    <h2>Modern clothing.<br>Lasting character.</h2>
+  </div>
+
+  <p>
+    AURENAR creates refined everyday clothing for those
+    who value quality, simplicity and quiet confidence.
+    Every piece is designed to feel relevant beyond a season.
+  </p>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-brand">AURENAR</div>
+
+  <div class="footer-links">
+    <a href="#shop">Shop</a>
+    <a href="#about">About</a>
+    <a href="mailto:hello@aurenar.com">Contact</a>
+  </div>
+
+  <p>© 2026 AURENAR. All rights reserved.</p>
+</footer>
+
+
+<!-- BAG DRAWER -->
+<div class="overlay" id="overlay"></div>
+
+<aside class="drawer" id="bagDrawer">
+  <div class="drawer-head">
+    <h2>Your Bag</h2>
+    <button id="closeBag" type="button">CLOSE</button>
+  </div>
+  <div class="drawer-body" id="bagBody">
+    <p class="msg">Your bag is empty.</p>
+  </div>
+</aside>
+
+
+<!-- ACCOUNT DRAWER -->
+<aside class="drawer" id="accountDrawer">
+  <div class="drawer-head">
+    <h2>Account</h2>
+    <button id="closeAccount" type="button">CLOSE</button>
+  </div>
+  <div class="drawer-body" id="accountBody">
+    <p class="msg">Sign in to your AURENAR account.</p>
+  </div>
+</aside>
+
+
+<!-- SEARCH DRAWER -->
+<aside class="drawer" id="searchDrawer">
+  <div class="drawer-head">
+    <h2>Search</h2>
+    <button id="closeSearch" type="button">CLOSE</button>
+  </div>
+
+  <div class="drawer-body">
+    <input
+      id="searchInput"
+      class="search-input"
+      type="search"
+      placeholder="Search AURENAR"
+      autocomplete="off"
+    >
+    <div id="searchResults"></div>
+  </div>
+</aside>
+
+
+<!-- CHECKOUT DRAWER -->
+<aside class="drawer" id="checkoutDrawer">
+  <div class="drawer-head">
+    <h2>Checkout</h2>
+    <button id="closeCheckout" type="button">CLOSE</button>
+  </div>
+
+  <div class="drawer-body">
+    <p class="msg">
+      Checkout is ready for integration.
+    </p>
+
+    <button class="primary" disabled>
+      PAYMENT — COMING SOON
+    </button>
+  </div>
+</aside>
+
+
+</body>
+  </html>
