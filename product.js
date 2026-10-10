@@ -1,1020 +1,697 @@
-import { supabase } from "./supabase.js";
+
+import { supabase } from './supabase-client.js';
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+const CART_KEY = 'aurenar_cart';
+const WISH_KEY = 'aurenar_wishlist';
 
 const FALLBACK = [
   {
-    id: "fallback-1",
-    name: "White Linen Shirt",
-    slug: "white-linen-shirt",
+    id: 'fallback-1',
+    name: 'White Linen Shirt',
     price: 1499,
-    compare_at_price: null,
-    description:
-      "A clean linen essential with a relaxed, considered silhouette.",
-    images: [
-      "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=1400&q=84"
-    ],
-    sizes: ["S", "M", "L", "XL"],
-    stock: 25,
+    image_url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=1400&q=84',
+    sizes: ['S', 'M', 'L', 'XL'],
+    description: 'A clean linen essential with a relaxed, considered silhouette.',
     is_active: true
   },
   {
-    id: "fallback-2",
-    name: "Noir Overshirt",
-    slug: "noir-overshirt",
+    id: 'fallback-2',
+    name: 'Noir Overshirt',
     price: 1899,
-    compare_at_price: null,
-    description:
-      "A structured everyday layer in a deep, understated tone.",
-    images: [
-      "https://images.unsplash.com/photo-1598808503746-f34c53b9323e?auto=format&fit=crop&w=1400&q=84"
-    ],
-    sizes: ["S", "M", "L", "XL"],
-    stock: 18,
+    image_url: 'https://images.unsplash.com/photo-1598808503746-f34c53b9323e?auto=format&fit=crop&w=1400&q=84',
+    sizes: ['S', 'M', 'L', 'XL'],
+    description: 'A structured everyday layer in a deep, understated tone.',
     is_active: true
   },
   {
-    id: "fallback-3",
-    name: "Stone Trousers",
-    slug: "stone-trousers",
+    id: 'fallback-3',
+    name: 'Stone Trousers',
     price: 1799,
-    compare_at_price: null,
-    description:
-      "Relaxed tailored trousers designed for an effortless line.",
-    images: [
-      "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1400&q=84"
-    ],
-    sizes: ["30", "32", "34", "36"],
-    stock: 14,
+    image_url: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1400&q=84',
+    sizes: ['30', '32', '34', '36'],
+    description: 'Relaxed tailored trousers designed for an effortless line.',
     is_active: true
   }
 ];
 
-const $ = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-
-const CART_KEY = "aurenar_cart";
-const WISHLIST_KEY = "aurenar_wishlist";
-
 let products = [];
-let currentProduct = null;
+let selectedProduct = null;
+let selectedSize = '';
 
-
-/* -------------------- HELPERS -------------------- */
-
-function readCart() {
+function readStorage(key) {
   try {
-    return JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+    const value = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(value) ? value : [];
   } catch {
     return [];
   }
 }
 
-function writeCart(value) {
-  localStorage.setItem(CART_KEY, JSON.stringify(value));
-}
-
-function readWishlist() {
-  try {
-    return JSON.parse(localStorage.getItem(WISHLIST_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function writeWishlist(value) {
-  localStorage.setItem(WISHLIST_KEY, JSON.stringify(value));
+function writeStorage(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
 function money(value) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
     maximumFractionDigits: 0
   }).format(Number(value) || 0);
 }
 
 function safe(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[char]));
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
 }
 
-function getImages(product) {
-  if (Array.isArray(product.images)) {
-    return product.images.filter(Boolean);
+function imageOf(product) {
+  if (Array.isArray(product.images) && product.images.length) {
+    return product.images[0];
   }
 
-  if (typeof product.images === "string") {
+  if (typeof product.images === 'string' && product.images.trim()) {
     try {
       const parsed = JSON.parse(product.images);
-      return Array.isArray(parsed) ? parsed.filter(Boolean) : [product.images];
+      if (Array.isArray(parsed) && parsed[0]) return parsed[0];
     } catch {
-      return [product.images];
+      return product.images;
     }
   }
 
-  return [];
+  return product.image_url ||
+    'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1400&q=84';
 }
 
-function productImage(product) {
-  return (
-    getImages(product)[0] ||
-    "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1400&q=84"
-  );
+function normalize(product) {
+  return {
+    ...product,
+    images: Array.isArray(product.images)
+      ? product.images
+      : [product.image_url].filter(Boolean),
+    sizes: Array.isArray(product.sizes)
+      ? product.sizes
+      : typeof product.sizes === 'string'
+        ? product.sizes.split(',').map(size => size.trim()).filter(Boolean)
+        : ['S', 'M', 'L', 'XL']
+  };
 }
-
-
-/* -------------------- TOAST -------------------- */
 
 function toast(message) {
-  const element = $("#toast");
-
+  const element = $('#toast');
   if (!element) return;
 
   element.textContent = message;
-  element.classList.add("show");
+  element.classList.add('show');
 
-  clearTimeout(window.__aurenarToast);
-
-  window.__aurenarToast = setTimeout(() => {
-    element.classList.remove("show");
-  }, 2200);
+  clearTimeout(window.__aurenarToastTimer);
+  window.__aurenarToastTimer = setTimeout(() => {
+    element.classList.remove('show');
+  }, 2300);
 }
 
-
-/* -------------------- DRAWERS -------------------- */
-
 function openDrawer(id) {
-  const drawer = $("#" + id);
-  const overlay = $("#overlay");
+  const drawer = $('#' + id);
+  const overlay = $('#overlay');
 
   if (!drawer) return;
 
-  drawer.classList.add("open");
-  drawer.setAttribute("aria-hidden", "false");
+  drawer.classList.add('open');
+  drawer.setAttribute('aria-hidden', 'false');
 
   if (overlay) {
     overlay.hidden = false;
-    overlay.classList.add("open");
+    overlay.classList.add('open');
   }
 }
 
 function closeDrawer(id) {
-  const drawer = $("#" + id);
-
+  const drawer = $('#' + id);
   if (!drawer) return;
 
-  drawer.classList.remove("open");
-  drawer.setAttribute("aria-hidden", "true");
+  drawer.classList.remove('open');
+  drawer.setAttribute('aria-hidden', 'true');
 
-  if (!$$(".drawer.open").length) {
-    const overlay = $("#overlay");
-
+  if (!$$('.drawer.open').length) {
+    const overlay = $('#overlay');
     if (overlay) {
       overlay.hidden = true;
-      overlay.classList.remove("open");
+      overlay.classList.remove('open');
     }
   }
 }
 
-
-/* -------------------- BAG COUNT -------------------- */
+function closeAllDrawers() {
+  $$('.drawer.open').forEach(drawer => closeDrawer(drawer.id));
+}
 
 function updateBagCount() {
-  const count = readCart().reduce(
-    (total, item) => total + Number(item.qty || 0),
-    0
+  const count = readStorage(CART_KEY)
+    .reduce((total, item) => total + (Number(item.qty) || 0), 0);
+
+  $$('#bagCount').forEach(element => {
+    element.textContent = count;
+  });
+}
+
+function wishlistIds() {
+  return readStorage(WISH_KEY).map(String);
+}
+
+function toggleWishlist(product) {
+  const current = wishlistIds();
+  const id = String(product.id);
+  const exists = current.includes(id);
+
+  const next = exists
+    ? current.filter(item => item !== id)
+    : [...current, id];
+
+  writeStorage(WISH_KEY, next);
+  updateWishlistButton();
+  renderProduct();
+
+  toast(exists ? 'Removed from wishlist' : 'Added to wishlist');
+}
+
+function updateWishlistButton() {
+  const button = $('#wishlistBtn');
+  if (!button) return;
+
+  const saved = wishlistIds();
+  button.setAttribute(
+    'aria-label',
+    `Wishlist, ${saved.length} saved item${saved.length === 1 ? '' : 's'}`
   );
-
-  const counter = $("#bagCount");
-
-  if (counter) {
-    counter.textContent = count;
-  }
+  button.classList.toggle('is-active', saved.length > 0);
 }
 
+function renderProduct() {
+  const root = $('#productDetail');
+  if (!root || !selectedProduct) return;
 
-/* -------------------- PRODUCT LOAD -------------------- */
+  const product = selectedProduct;
+  const images = product.images.length
+    ? product.images
+    : [imageOf(product)];
 
-async function loadProducts() {
-  let data = null;
-
-  try {
-    const response = await supabase
-      .from("products")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
-
-    if (response.error) {
-      throw response.error;
-    }
-
-    data = response.data || [];
-  } catch (error) {
-    console.warn("Supabase product loading failed:", error);
-  }
-
-  products = (data || []).map(product => ({
-    ...product,
-    images: getImages(product),
-    sizes: Array.isArray(product.sizes) ? product.sizes : []
-  }));
-
-  if (!products.length) {
-    products = FALLBACK;
-  }
-
-  const params = new URLSearchParams(window.location.search);
-
-  const id = params.get("id");
-  const slug = params.get("slug");
-
-  currentProduct =
-    products.find(product => String(product.id) === String(id)) ||
-    products.find(product => product.slug === slug) ||
-    products[0];
-
-  if (currentProduct) {
-    renderProduct(currentProduct);
-  }
-}
-
-
-/* -------------------- PRODUCT RENDER -------------------- */
-
-function renderProduct(product) {
-  const root = $("#productDetail");
-
-  if (!root) return;
+  const saved = wishlistIds().includes(String(product.id));
+  const hasStockColumn = product.stock !== undefined && product.stock !== null;
+  const soldOut = hasStockColumn && Number(product.stock) <= 0;
 
   document.title = `${product.name} — AURENAR`;
 
-  const images = getImages(product);
-
-  const galleryImages = images.length
-    ? images
-    : [productImage(product)];
-
-  const wishlist = readWishlist();
-
-  const isWishlisted = wishlist.some(
-    id => String(id) === String(product.id)
-  );
-
   root.innerHTML = `
     <div class="detail-gallery">
-
-      ${galleryImages
-        .map(
-          (image, index) => `
-            <div class="detail-image">
-              <img
-                src="${safe(image)}"
-                alt="${safe(product.name)}${index ? " alternate view" : ""}"
-                loading="${index === 0 ? "eager" : "lazy"}"
-              >
-            </div>
-          `
-        )
-        .join("")}
-
+      ${images.map((url, index) => `
+        <div class="detail-image">
+          <img
+            src="${safe(url)}"
+            alt="${safe(product.name)}${index ? ' alternate view' : ''}"
+            loading="${index ? 'lazy' : 'eager'}"
+          >
+        </div>
+      `).join('')}
     </div>
 
     <div class="detail-info">
-
       <p class="eyebrow">
-        AURENAR / ${Number(product.stock) > 0 ? "AVAILABLE" : "SOLD OUT"}
+        AURENAR / ${soldOut ? 'SOLD OUT' : 'MODERN ESSENTIALS'}
       </p>
 
       <h1>${safe(product.name)}</h1>
 
       <div class="detail-price">
         ${money(product.price)}
-
-        ${
-          product.compare_at_price
-            ? `<del>${money(product.compare_at_price)}</del>`
-            : ""
-        }
+        ${product.compare_at_price
+          ? `<del>${money(product.compare_at_price)}</del>`
+          : ''}
       </div>
 
       <p class="detail-desc">
-        ${safe(
-          product.description ||
-            "A considered AURENAR essential designed for everyday wear."
-        )}
+        ${safe(product.description || 'A considered AURENAR essential.')}
       </p>
 
-      ${
-        product.sizes?.length
-          ? `
-            <div class="detail-field">
+      ${product.sizes.length ? `
+        <div class="detail-field">
+          <div class="field-label">
+            <span>SELECT SIZE</span>
+            <button type="button" id="sizeGuide">SIZE GUIDE</button>
+          </div>
 
-              <div class="field-label">
-                <span>SELECT SIZE</span>
-
-                <button
-                  type="button"
-                  id="sizeGuide"
-                >
-                  SIZE GUIDE
-                </button>
-              </div>
-
-              <div
-                class="size-grid"
-                id="sizes"
-              >
-
-                ${product.sizes
-                  .map(
-                    size => `
-                      <button
-                        type="button"
-                        class="size-option"
-                        data-size="${safe(size)}"
-                      >
-                        ${safe(size)}
-                      </button>
-                    `
-                  )
-                  .join("")}
-
-              </div>
-
-            </div>
-          `
-          : ""
-      }
+          <div class="size-grid" id="sizes">
+            ${product.sizes.map(size => `
+              <button
+                type="button"
+                class="size-option"
+                data-size="${safe(size)}"
+              >${safe(size)}</button>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
 
       <div class="detail-actions">
-
         <button
+          type="button"
           class="primary-btn"
           id="addBtn"
-          ${Number(product.stock) <= 0 ? "disabled" : ""}
+          ${soldOut ? 'disabled' : ''}
         >
-          ${
-            Number(product.stock) <= 0
-              ? "OUT OF STOCK"
-              : "ADD TO BAG"
-          }
+          ${soldOut ? 'SOLD OUT' : 'ADD TO BAG'}
         </button>
 
         <button
           type="button"
-          class="wishlist-large ${isWishlisted ? "active" : ""}"
+          class="wishlist-large"
           id="wishBtn"
+          aria-pressed="${saved}"
         >
-          ${isWishlisted ? "♥" : "♡"}
-          <span>
-            ${isWishlisted ? "WISHLISTED" : "WISHLIST"}
-          </span>
+          ${saved ? '♥' : '♡'}
+          <span>${saved ? 'WISHLISTED' : 'WISHLIST'}</span>
         </button>
-
       </div>
 
       <div class="product-notes">
-
         <div>
-          <strong>STOCK</strong>
-          <span>
-            ${
-              Number(product.stock) > 0
-                ? `${product.stock} available`
-                : "Currently unavailable"
-            }
-          </span>
+          <strong>COLLECTION</strong>
+          <span>${safe(product.category || 'Modern essentials')}</span>
         </div>
-
         <div>
           <strong>DELIVERY</strong>
-          <span>
-            Complimentary over ₹2,500
-          </span>
+          <span>Complimentary over ₹2,500</span>
         </div>
-
         <div>
           <strong>DETAIL</strong>
-          <span>
-            Designed with everyday versatility in mind.
-          </span>
+          <span>Designed with everyday versatility in mind.</span>
         </div>
-
       </div>
-
     </div>
   `;
 
-  wireProduct(product);
-}
+  selectedSize = '';
 
+  $$('.size-option', root).forEach(button => {
+    button.addEventListener('click', () => {
+      $$('.size-option', root).forEach(item => {
+        item.classList.remove('selected');
+      });
 
-/* -------------------- PRODUCT ACTIONS -------------------- */
-
-function wireProduct(product) {
-  let selectedSize =
-    product.sizes?.length === 1
-      ? product.sizes[0]
-      : "";
-
-  $$(".size-option").forEach(button => {
-    button.addEventListener("click", () => {
-
-      $$(".size-option").forEach(item =>
-        item.classList.remove("selected")
-      );
-
-      button.classList.add("selected");
-
+      button.classList.add('selected');
       selectedSize = button.dataset.size;
     });
   });
 
-
-  $("#addBtn")?.addEventListener("click", () => {
-
-    if (Number(product.stock) <= 0) {
-      return;
-    }
-
-    if (product.sizes?.length && !selectedSize) {
-      toast("Select a size first");
-      return;
-    }
-
-    const cart = readCart();
-
-    const key = `${product.id}::${selectedSize}`;
-
-    const existing = cart.find(item => item.key === key);
-
-    if (existing) {
-      existing.qty = Math.min(
-        existing.qty + 1,
-        Number(product.stock)
-      );
-    } else {
-      cart.push({
-        key,
-        id: product.id,
-        size: selectedSize,
-        qty: 1
-      });
-    }
-
-    writeCart(cart);
-    updateBagCount();
-    renderBag();
-
-    toast("Added to bag");
-
-    openDrawer("bagDrawer");
+  $('#addBtn', root)?.addEventListener('click', addSelectedProduct);
+  $('#wishBtn', root)?.addEventListener('click', () => {
+    toggleWishlist(product);
   });
 
-
-  $("#wishBtn")?.addEventListener("click", () => {
-
-    let wishlist = readWishlist();
-
-    const exists = wishlist.some(
-      id => String(id) === String(product.id)
-    );
-
-    if (exists) {
-      wishlist = wishlist.filter(
-        id => String(id) !== String(product.id)
-      );
-    } else {
-      wishlist.push(product.id);
-    }
-
-    writeWishlist(wishlist);
-
-    const button = $("#wishBtn");
-
-    if (button) {
-      const active = wishlist.some(
-        id => String(id) === String(product.id)
-      );
-
-      button.classList.toggle("active", active);
-
-      button.innerHTML = active
-        ? `♥ <span>WISHLISTED</span>`
-        : `♡ <span>WISHLIST</span>`;
-    }
-
-    toast(
-      exists
-        ? "Removed from wishlist"
-        : "Added to wishlist"
-    );
-  });
-
-
-  $("#sizeGuide")?.addEventListener("click", () => {
-    toast("Size guide will be added with final measurements.");
+  $('#sizeGuide', root)?.addEventListener('click', () => {
+    toast('Please check the product size before ordering.');
   });
 }
 
+function addSelectedProduct() {
+  const product = selectedProduct;
+  if (!product) return;
 
-/* -------------------- BAG -------------------- */
+  if (product.sizes.length && !selectedSize) {
+    toast('Please select a size first');
+    return;
+  }
+
+  const cart = readStorage(CART_KEY);
+  const key = `${product.id}::${selectedSize}`;
+  const existing = cart.find(item => item.key === key);
+
+  if (existing) {
+    existing.qty = (Number(existing.qty) || 0) + 1;
+  } else {
+    cart.push({
+      key,
+      id: product.id,
+      size: selectedSize,
+      qty: 1
+    });
+  }
+
+  writeStorage(CART_KEY, cart);
+  updateBagCount();
+  renderBag();
+  toast('Added to bag');
+  openDrawer('bagDrawer');
+}
 
 function renderBag() {
-  const body = $("#bagBody");
-  const foot = $("#bagFoot");
+  const body = $('#bagBody');
+  const footer = $('#bagFoot');
+  if (!body || !footer) return;
 
-  if (!body || !foot) return;
-
-  const cart = readCart();
+  const cart = readStorage(CART_KEY);
 
   if (!cart.length) {
-    body.innerHTML = `
-      <div class="empty-state">
-        Your bag is empty.
-      </div>
-    `;
-
-    foot.innerHTML = "";
-
+    body.innerHTML = '<div class="empty-state">Your bag is empty.</div>';
+    footer.innerHTML = '';
     return;
   }
 
   let subtotal = 0;
 
-  body.innerHTML = cart
-    .map(item => {
+  body.innerHTML = cart.map(item => {
+    const product = products.find(
+      candidate => String(candidate.id) === String(item.id)
+    );
 
-      const product = products.find(
-        p => String(p.id) === String(item.id)
-      );
+    if (!product) return '';
 
-      if (!product) return "";
+    subtotal += Number(product.price) * Number(item.qty);
 
-      subtotal +=
-        Number(product.price || 0) *
-        Number(item.qty || 0);
+    return `
+      <div class="bag-item">
+        <img src="${safe(imageOf(product))}" alt="${safe(product.name)}">
 
-      return `
-        <div class="bag-item">
+        <div class="bag-item-main">
+          <strong>${safe(product.name)}</strong>
+          <span>
+            ${item.size ? `Size ${safe(item.size)} · ` : ''}
+            ${money(product.price)}
+          </span>
 
-          <img
-            src="${safe(productImage(product))}"
-            alt="${safe(product.name)}"
-          >
-
-          <div class="bag-item-main">
-
-            <strong>
-              ${safe(product.name)}
-            </strong>
-
-            <span>
-              ${
-                item.size
-                  ? `Size ${safe(item.size)} · `
-                  : ""
-              }
-              ${money(product.price)}
-            </span>
-
-            <div class="qty">
-
-              <button
-                type="button"
-                data-cart-key="${safe(item.key)}"
-                data-cart-delta="-1"
-              >
-                −
-              </button>
-
-              <span>
-                ${item.qty}
-              </span>
-
-              <button
-                type="button"
-                data-cart-key="${safe(item.key)}"
-                data-cart-delta="1"
-              >
-                +
-              </button>
-
-            </div>
-
+          <div class="qty">
+            <button type="button" data-k="${safe(item.key)}" data-d="-1">−</button>
+            <span>${Number(item.qty) || 1}</span>
+            <button type="button" data-k="${safe(item.key)}" data-d="1">+</button>
           </div>
-
         </div>
-      `;
-    })
-    .join("");
+      </div>
+    `;
+  }).join('');
 
-  $$("[data-cart-key]", body).forEach(button => {
-
-    button.addEventListener("click", () => {
-
-      const cartNow = readCart();
-
-      const item = cartNow.find(
-        entry => entry.key === button.dataset.cartKey
-      );
-
+  $$('[data-k]', body).forEach(button => {
+    button.addEventListener('click', () => {
+      const updated = readStorage(CART_KEY);
+      const item = updated.find(entry => entry.key === button.dataset.k);
       if (!item) return;
 
-      item.qty += Number(
-        button.dataset.cartDelta
-      );
+      item.qty = (Number(item.qty) || 1) + Number(button.dataset.d);
 
-      if (item.qty <= 0) {
-        const updated = cartNow.filter(
-          entry => entry.key !== item.key
-        );
-
-        writeCart(updated);
-      } else {
-        writeCart(cartNow);
-      }
+      const finalCart = updated.filter(entry => entry.qty > 0);
+      writeStorage(CART_KEY, finalCart);
 
       updateBagCount();
       renderBag();
     });
-
   });
 
+  const shipping = subtotal >= 2500 ? 0 : 199;
 
-  const shipping =
-    subtotal >= 2500 || subtotal === 0
-      ? 0
-      : 199;
-
-  const total = subtotal + shipping;
-
-  foot.innerHTML = `
+  footer.innerHTML = `
     <div class="totals">
-
-      <span>
-        TOTAL
-      </span>
-
-      <strong>
-        ${money(total)}
-      </strong>
-
-    </div>
-
-    <button
-      class="primary-btn"
-      id="checkoutBtn"
-    >
-      PROCEED TO CHECKOUT
-    </button>
-  `;
-
-  $("#checkoutBtn")?.addEventListener(
-    "click",
-    () => {
-      renderCheckout();
-      openDrawer("checkoutDrawer");
-    }
-  );
-}
-
-
-/* -------------------- CHECKOUT -------------------- */
-
-function renderCheckout() {
-  const summary = $("#checkoutSummary");
-
-  if (!summary) return;
-
-  const cart = readCart();
-
-  let subtotal = 0;
-
-  cart.forEach(item => {
-
-    const product = products.find(
-      p => String(p.id) === String(item.id)
-    );
-
-    if (product) {
-      subtotal +=
-        Number(product.price || 0) *
-        Number(item.qty || 0);
-    }
-  });
-
-  const shipping =
-    subtotal >= 2500 || subtotal === 0
-      ? 0
-      : 199;
-
-  summary.innerHTML = `
-    <div>
       <span>SUBTOTAL</span>
       <strong>${money(subtotal)}</strong>
     </div>
 
-    <div>
+    <div class="totals">
       <span>SHIPPING</span>
-      <strong>
-        ${
-          shipping
-            ? money(shipping)
-            : "COMPLIMENTARY"
-        }
-      </strong>
+      <strong>${shipping ? money(shipping) : 'COMPLIMENTARY'}</strong>
     </div>
 
+    <button type="button" class="primary-btn" id="checkoutBtn">
+      PROCEED TO CHECKOUT
+    </button>
+  `;
+
+  $('#checkoutBtn')?.addEventListener('click', () => {
+    renderCheckout();
+    openDrawer('checkoutDrawer');
+  });
+}
+
+function renderCheckout() {
+  const summary = $('#checkoutSummary');
+  if (!summary) return;
+
+  const cart = readStorage(CART_KEY);
+  const subtotal = cart.reduce((total, item) => {
+    const product = products.find(
+      candidate => String(candidate.id) === String(item.id)
+    );
+
+    return total + (Number(product?.price) || 0) * (Number(item.qty) || 0);
+  }, 0);
+
+  const shipping = subtotal >= 2500 ? 0 : 199;
+
+  summary.innerHTML = `
+    <div><span>SUBTOTAL</span><strong>${money(subtotal)}</strong></div>
+    <div>
+      <span>SHIPPING</span>
+      <strong>${shipping ? money(shipping) : 'COMPLIMENTARY'}</strong>
+    </div>
     <div class="summary-total">
       <span>TOTAL</span>
-      <strong>
-        ${money(subtotal + shipping)}
-      </strong>
+      <strong>${money(subtotal + shipping)}</strong>
     </div>
   `;
 }
 
+function showWishlist() {
+  const results = $('#searchResults');
+  const input = $('#searchInput');
+  if (!results) return;
 
-/* -------------------- ACCOUNT -------------------- */
+  if (input) input.value = '';
 
-async function account() {
+  const saved = wishlistIds();
+  const items = products.filter(product => saved.includes(String(product.id)));
 
-  const body = $("#accountBody");
+  results.innerHTML = items.length
+    ? `<p class="eyebrow">YOUR WISHLIST</p>` + items.map(product => `
+        <a class="search-result" href="/product.html?id=${encodeURIComponent(product.id)}">
+          <img src="${safe(imageOf(product))}" alt="">
+          <span>${safe(product.name)} · ${money(product.price)}</span>
+        </a>
+      `).join('')
+    : '<p class="empty-state">Your wishlist is empty.</p>';
 
+  openDrawer('searchDrawer');
+}
+
+function renderSearch(query) {
+  const results = $('#searchResults');
+  if (!results) return;
+
+  const term = query.trim().toLowerCase();
+
+  if (!term) {
+    results.innerHTML = '<p class="empty-state">Search the collection.</p>';
+    return;
+  }
+
+  const matches = products.filter(product =>
+    `${product.name} ${product.category || ''} ${product.description || ''}`
+      .toLowerCase()
+      .includes(term)
+  );
+
+  results.innerHTML = matches.length
+    ? matches.map(product => `
+        <a class="search-result" href="/product.html?id=${encodeURIComponent(product.id)}">
+          <img src="${safe(imageOf(product))}" alt="">
+          <span>${safe(product.name)} · ${money(product.price)}</span>
+        </a>
+      `).join('')
+    : '<p class="empty-state">No matching products found.</p>';
+}
+
+async function renderAccount() {
+  const body = $('#accountBody');
   if (!body) return;
 
-  const {
-    data,
-    error
-  } = await supabase.auth.getSession();
+  body.innerHTML = '<p class="empty-state">Loading account…</p>';
+
+  const { data, error } = await supabase.auth.getSession();
 
   if (error) {
-    body.innerHTML = `
-      <p>
-        Unable to load account.
-      </p>
-    `;
-
+    body.innerHTML = '<p>Account could not be loaded. Please try again.</p>';
     return;
   }
 
   if (data.session) {
-
     body.innerHTML = `
-      <p class="eyebrow">
-        SIGNED IN
-      </p>
-
-      <h2>
-        ${safe(data.session.user.email)}
-      </h2>
-
-      <button
-        class="secondary-btn"
-        id="signOut"
-      >
-        SIGN OUT
-      </button>
+      <p class="eyebrow">SIGNED IN</p>
+      <h2>${safe(data.session.user.email)}</h2>
+      <button type="button" class="secondary-btn" id="signOut">SIGN OUT</button>
     `;
 
-    $("#signOut")?.addEventListener(
-      "click",
-      async () => {
+    $('#signOut')?.addEventListener('click', async () => {
+      const { error: signOutError } = await supabase.auth.signOut();
 
-        await supabase.auth.signOut();
-
-        account();
+      if (signOutError) {
+        toast('Could not sign out. Try again.');
+        return;
       }
-    );
+
+      renderAccount();
+      toast('Signed out');
+    });
 
     return;
   }
 
-
   body.innerHTML = `
-    <p class="eyebrow">
-      ACCOUNT
-    </p>
-
-    <p>
-      Sign in or create an account to keep
-      your details ready for future orders.
-    </p>
-
-    <form
-      id="accountForm"
-      class="auth-form"
-    >
-
-      <input
-        required
-        type="email"
-        name="email"
-        placeholder="Email address"
-      >
-
-      <input
-        required
-        minlength="6"
-        type="password"
-        name="password"
-        placeholder="Password"
-      >
-
-      <button
-        class="primary-btn"
-        type="submit"
-      >
-        SIGN IN
-      </button>
-
-      <button
-        type="button"
-        class="secondary-btn"
-        id="signup"
-      >
-        CREATE ACCOUNT
-      </button>
-
-      <p
-        id="accountMessage"
-        class="form-message"
-      ></p>
-
+    <p class="eyebrow">YOUR AURENAR ACCOUNT</p>
+    <form id="accountForm" class="auth-form">
+      <input required type="email" name="email" placeholder="Email address">
+      <input required minlength="6" type="password" name="password" placeholder="Password">
+      <button type="submit" class="primary-btn">SIGN IN</button>
+      <button type="button" class="secondary-btn" id="signupBtn">CREATE ACCOUNT</button>
+      <p id="accountMessage" class="form-message"></p>
     </form>
   `;
 
+  $('#accountForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
 
-  $("#accountForm")?.addEventListener(
-    "submit",
-    async event => {
+    const form = new FormData(event.currentTarget);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: form.get('email'),
+      password: form.get('password')
+    });
 
-      event.preventDefault();
+    const message = $('#accountMessage');
 
-      const form =
-        event.currentTarget;
-
-      const data =
-        new FormData(form);
-
-      const email =
-        data.get("email");
-
-      const password =
-        data.get("password");
-
-      const message =
-        $("#accountMessage");
-
-      message.textContent =
-        "Signing in…";
-
-      const result =
-        await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
-      if (result.error) {
-        message.textContent =
-          result.error.message;
-
-        return;
-      }
-
-      message.textContent =
-        "Signed in successfully.";
-
-      account();
+    if (message) {
+      message.textContent = signInError
+        ? signInError.message
+        : 'Signed in successfully.';
     }
-  );
 
+    if (!signInError) renderAccount();
+  });
 
-  $("#signup")?.addEventListener(
-    "click",
-    async () => {
+  $('#signupBtn')?.addEventListener('click', async () => {
+    const form = new FormData($('#accountForm'));
 
-      const form =
-        $("#accountForm");
+    const { error: signupError } = await supabase.auth.signUp({
+      email: form.get('email'),
+      password: form.get('password')
+    });
 
-      const data =
-        new FormData(form);
+    const message = $('#accountMessage');
 
-      const email =
-        data.get("email");
-
-      const password =
-        data.get("password");
-
-      const message =
-        $("#accountMessage");
-
-      message.textContent =
-        "Creating account…";
-
-      const result =
-        await supabase.auth.signUp({
-          email,
-          password
-        });
-
-      if (result.error) {
-        message.textContent =
-          result.error.message;
-
-        return;
-      }
-
-      message.textContent =
-        "Account created. Check your email if confirmation is enabled.";
+    if (message) {
+      message.textContent = signupError
+        ? signupError.message
+        : 'Account request submitted. Check your email if confirmation is enabled.';
     }
-  );
+  });
 }
 
-
-/* -------------------- HEADER -------------------- */
-
-function wireHeader() {
-
+function wireInterface() {
   updateBagCount();
+  updateWishlistButton();
   renderBag();
 
-  $("#bagBtn")?.addEventListener(
-    "click",
-    () => openDrawer("bagDrawer")
-  );
+  $('#bagBtn')?.addEventListener('click', () => {
+    renderBag();
+    openDrawer('bagDrawer');
+  });
 
-  $("#accountBtn")?.addEventListener(
-    "click",
-    () => {
-      openDrawer("accountDrawer");
-      account();
-    }
-  );
+  $('#accountBtn')?.addEventListener('click', () => {
+    openDrawer('accountDrawer');
+    renderAccount();
+  });
 
-  $("#searchBtn")?.addEventListener(
-    "click",
-    () => openDrawer("searchDrawer")
-  );
+  $('#searchBtn')?.addEventListener('click', () => {
+    openDrawer('searchDrawer');
+    $('#searchInput')?.focus();
+    renderSearch($('#searchInput')?.value || '');
+  });
 
-  $("#wishlistBtn")?.addEventListener(
-    "click",
-    () => {
-      const wishlist = readWishlist();
+  $('#wishlistBtn')?.addEventListener('click', showWishlist);
 
-      toast(
-        wishlist.length
-          ? `${wishlist.length} item${wishlist.length > 1 ? "s" : ""} in wishlist`
-          : "Your wishlist is empty"
-      );
-    }
-  );
+  $('#searchInput')?.addEventListener('input', event => {
+    renderSearch(event.target.value);
+  });
 
+  $('#overlay')?.addEventListener('click', closeAllDrawers);
 
-  $("#menuBtn")?.addEventListener(
-    "click",
-    () => {
-      $("#mobileNav")?.classList.toggle("open");
-    }
-  );
+  $$('[data-close]').forEach(button => {
+    button.addEventListener('click', () => {
+      closeDrawer(button.dataset.close);
+    });
+  });
 
+  $('#menuBtn')?.addEventListener('click', () => {
+    const nav = $('#mobileNav');
+    if (!nav) return;
 
-  $("#overlay")?.addEventListener(
-    "click",
-    () => {
-      $$(".drawer.open").forEach(
-        drawer => closeDrawer(drawer.id)
-      );
-    }
-  );
+    const opened = nav.classList.toggle('open');
+    nav.setAttribute('aria-hidden', String(!opened));
+  });
 
-
-  $$("[data-close]").forEach(
-    button => {
-      button.addEventListener(
-        "click",
-        () => closeDrawer(button.dataset.close)
-      );
-    }
-  );
-
-
-  $("#checkoutForm")?.addEventListener(
-    "submit",
-    event => {
-      event.preventDefault();
-    }
-  );
+  $('#checkoutForm')?.addEventListener('submit', event => {
+    event.preventDefault();
+    toast('Online payment is not connected yet.');
+  });
 }
 
+async function loadProducts() {
+  const params = new URLSearchParams(location.search);
+  const requestedId = params.get('id');
+  const requestedSlug = params.get('slug');
 
-/* -------------------- START -------------------- */
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true);
 
-wireHeader();
+    if (error) throw error;
+
+    products = (data || []).map(normalize);
+  } catch (error) {
+    console.error('AURENAR product loading error:', error);
+    products = [];
+  }
+
+  if (!products.length) {
+    products = FALLBACK.map(normalize);
+  }
+
+  selectedProduct = products.find(product =>
+    requestedId && String(product.id) === String(requestedId)
+  );
+
+  if (!selectedProduct && requestedSlug) {
+    selectedProduct = products.find(product => {
+      const slug = String(product.slug || product.name || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      return slug === requestedSlug.toLowerCase();
+    });
+  }
+
+  if (!selectedProduct) {
+    selectedProduct = products[0];
+  }
+
+  renderProduct();
+  renderBag();
+  updateBagCount();
+  updateWishlistButton();
+}
+
+wireInterface();
 loadProducts();
