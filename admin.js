@@ -1,6 +1,7 @@
 import { supabase } from "./supabase.js";
 
 const app = document.getElementById("app");
+const BUCKET = "aurenar-media";
 
 let products = [];
 let editingId = null;
@@ -53,6 +54,14 @@ const DEFAULT_SETTINGS = {
   }
 };
 
+const MEDIA_CATEGORIES = [
+  { value: "home", label: "Homepage" },
+  { value: "men", label: "Men" },
+  { value: "women", label: "Women" },
+  { value: "products", label: "Products" },
+  { value: "editorial", label: "Editorial" }
+];
+
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;",
@@ -97,7 +106,7 @@ function showLogin(message = "") {
               autocomplete="current-password" required>
           </label>
 
-          <button class="primary-btn" id="loginButton">
+          <button class="primary-btn" id="loginButton" type="submit">
             SIGN IN
           </button>
 
@@ -162,11 +171,13 @@ async function checkAdmin() {
 
   if (profileError || profile?.role !== "admin") {
     await supabase.auth.signOut();
+
     showLogin(
       profileError
         ? "Could not verify admin access. Check profiles permissions."
         : "This account does not have admin access."
     );
+
     return;
   }
 
@@ -191,6 +202,13 @@ async function loadSettings() {
     ...structuredClone(DEFAULT_SETTINGS),
     ...(data?.settings || {})
   };
+
+  for (const section of Object.keys(DEFAULT_SETTINGS)) {
+    storeSettings[section] = {
+      ...structuredClone(DEFAULT_SETTINGS[section]),
+      ...(data?.settings?.[section] || {})
+    };
+  }
 }
 
 async function saveSettings() {
@@ -213,6 +231,7 @@ async function saveSettings() {
       .select("id");
 
     if (error) throw error;
+
     if (!data?.length) {
       throw new Error(
         "Nothing saved. Check the admin account and database policies."
@@ -345,6 +364,7 @@ function renderSettings() {
       ${settingsSection("Store Theme", "Shared visual settings", `
         ${colorField("themes","homeBackground","Homepage background",s.themes.homeBackground)}
         ${colorField("themes","homeText","Homepage text colour",s.themes.homeText)}
+
         <label>
           FONT
           <select data-section="themes" data-key="font">
@@ -353,6 +373,7 @@ function renderSettings() {
             ).join("")}
           </select>
         </label>
+
         <label>
           BUTTON STYLE
           <select data-section="themes" data-key="buttonStyle">
@@ -434,6 +455,16 @@ async function showDashboard() {
           </button>
         </div>
 
+        <div class="admin-form-wrap" style="margin-bottom:24px">
+          <h2>Media Library</h2>
+          <p class="admin-muted">
+            Upload and preview images from your phone.
+          </p>
+          <button class="primary-btn" id="openMediaLibrary">
+            OPEN MEDIA LIBRARY
+          </button>
+        </div>
+
         <div class="admin-heading">
           <div>
             <p class="eyebrow">COLLECTION MANAGEMENT</p>
@@ -453,8 +484,245 @@ async function showDashboard() {
   document.getElementById("logout").onclick = logout;
   document.getElementById("addProduct").onclick = () => showProductForm();
   document.getElementById("openSettings").onclick = renderSettings;
+  document.getElementById("openMediaLibrary").onclick = showMediaLibrary;
 
   await loadProducts();
+}
+
+function showMediaLibrary() {
+  activeTab = "media";
+
+  app.innerHTML = `
+    <section class="admin-page">
+      <header class="admin-top">
+        <div>
+          <p class="eyebrow">AURENAR</p>
+          <h1>Media Library</h1>
+          <p class="admin-muted">Manage your store images.</p>
+        </div>
+        <button class="secondary-btn" id="backDashboard">
+          DASHBOARD
+        </button>
+      </header>
+
+      <div id="mediaLibraryContainer"></div>
+    </section>
+  `;
+
+  document.getElementById("backDashboard").onclick = showDashboard;
+
+  initMediaLibrary(document.getElementById("mediaLibraryContainer"));
+}
+
+function initMediaLibrary(container) {
+  container.innerHTML = `
+    <section class="admin-form-wrap media-library">
+      <h2>Upload Images</h2>
+      <p class="admin-muted">
+        JPG, PNG and WebP supported. Maximum 8 MB per image.
+      </p>
+
+      <div class="admin-form">
+        <label>
+          IMAGE CATEGORY
+          <select id="mediaCategory">
+            ${MEDIA_CATEGORIES.map(category => `
+              <option value="${category.value}">
+                ${category.label}
+              </option>
+            `).join("")}
+          </select>
+        </label>
+
+        <label>
+          SELECT FROM PHONE GALLERY
+          <input id="mediaFiles" type="file"
+            accept="image/jpeg,image/png,image/webp" multiple>
+        </label>
+
+        <div id="mediaLocalPreview" class="media-grid"></div>
+
+        <button class="primary-btn" id="uploadMedia" type="button">
+          UPLOAD IMAGES
+        </button>
+
+        <p id="mediaStatus" class="form-message" role="status"></p>
+      </div>
+    </section>
+
+    <section class="admin-form-wrap" style="margin-top:24px">
+      <h2>Uploaded Images</h2>
+      <div id="mediaGrid" class="media-grid"></div>
+    </section>
+  `;
+
+  const category = container.querySelector("#mediaCategory");
+  const filesInput = container.querySelector("#mediaFiles");
+  const uploadButton = container.querySelector("#uploadMedia");
+  const status = container.querySelector("#mediaStatus");
+  const grid = container.querySelector("#mediaGrid");
+  const localPreview = container.querySelector("#mediaLocalPreview");
+
+  let previewURLs = [];
+
+  filesInput.addEventListener("change", () => {
+    previewURLs.forEach(url => URL.revokeObjectURL(url));
+    previewURLs = [];
+    localPreview.replaceChildren();
+
+    for (const file of Array.from(filesInput.files || [])) {
+      if (!file.type.startsWith("image/")) continue;
+
+      const url = URL.createObjectURL(file);
+      previewURLs.push(url);
+
+      const image = document.createElement("img");
+      image.src = url;
+      image.alt = file.name;
+      image.loading = "lazy";
+      image.style.width = "100%";
+
+      const name = document.createElement("p");
+      name.textContent = file.name;
+
+      const card = document.createElement("article");
+      card.className = "media-card";
+      card.append(image, name);
+      localPreview.append(card);
+    }
+  });
+
+  async function loadImages() {
+    grid.replaceChildren();
+    status.textContent = "Loading images…";
+
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .list(category.value, {
+        limit: 100,
+        sortBy: { column: "created_at", order: "desc" }
+      });
+
+    if (error) {
+      status.textContent = "Could not load images: " + error.message;
+      return;
+    }
+
+    const images = (data || []).filter(file =>
+      file.name && /\.(jpe?g|png|webp)$/i.test(file.name)
+    );
+
+    status.textContent = images.length
+      ? `${images.length} images found.`
+      : "No images in this category yet.";
+
+    for (const file of images) {
+      const path = `${category.value}/${file.name}`;
+
+      const { data: urlData } = supabase.storage
+        .from(BUCKET)
+        .getPublicUrl(path);
+
+      const card = document.createElement("article");
+      card.className = "media-card";
+
+      const image = document.createElement("img");
+      image.src = urlData.publicUrl;
+      image.alt = file.name;
+      image.loading = "lazy";
+      image.style.width = "100%";
+
+      const name = document.createElement("p");
+      name.textContent = file.name;
+
+      const copyButton = document.createElement("button");
+      copyButton.type = "button";
+      copyButton.className = "secondary-btn";
+      copyButton.textContent = "COPY IMAGE URL";
+
+      copyButton.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(urlData.publicUrl);
+          status.textContent = "Image URL copied.";
+        } catch {
+          window.prompt("Copy this image URL:", urlData.publicUrl);
+        }
+      };
+
+      card.append(image, name, copyButton);
+      grid.append(card);
+    }
+  }
+
+  uploadButton.addEventListener("click", async () => {
+    const files = Array.from(filesInput.files || []);
+
+    if (!files.length) {
+      status.textContent = "Choose at least one image first.";
+      return;
+    }
+
+    uploadButton.disabled = true;
+    let uploaded = 0;
+    let failed = [];
+
+    try {
+      for (const file of files) {
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+          failed.push(`${file.name}: unsupported format`);
+          continue;
+        }
+
+        if (file.size > 8 * 1024 * 1024) {
+          failed.push(`${file.name}: exceeds 8 MB`);
+          continue;
+        }
+
+        const safeName = file.name
+          .normalize("NFKD")
+          .replace(/[^a-zA-Z0-9._-]/g, "-")
+          .replace(/-+/g, "-");
+
+        const path =
+          `${category.value}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+
+        status.textContent = `Uploading ${file.name}…`;
+
+        const { error } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, file, {
+            cacheControl: "3600",
+            contentType: file.type,
+            upsert: false
+          });
+
+        if (error) {
+          failed.push(`${file.name}: ${error.message}`);
+          continue;
+        }
+
+        uploaded++;
+      }
+
+      filesInput.value = "";
+      localPreview.replaceChildren();
+      previewURLs.forEach(url => URL.revokeObjectURL(url));
+      previewURLs = [];
+
+      await loadImages();
+
+      status.textContent =
+        `${uploaded} image(s) uploaded.` +
+        (failed.length ? ` Issues: ${failed.join(" | ")}` : "");
+    } catch (error) {
+      status.textContent = "Upload failed: " + error.message;
+    } finally {
+      uploadButton.disabled = false;
+    }
+  });
+
+  category.addEventListener("change", loadImages);
+  loadImages();
 }
 
 async function loadProducts() {
@@ -488,6 +756,7 @@ function renderProducts() {
         <button class="primary-btn" id="emptyAdd">ADD PRODUCT</button>
       </div>
     `;
+
     document.getElementById("emptyAdd").onclick = () => showProductForm();
     return;
   }
@@ -547,9 +816,11 @@ function showProductForm(product = null) {
           <label>PRODUCT NAME
             <input name="name" maxlength="150" required value="${esc(product?.name || "")}">
           </label>
+
           <label>PRICE (INR)
             <input name="price" type="number" min="0" step="0.01" required value="${product?.price ?? ""}">
           </label>
+
           <label>CATEGORY
             <select name="category">
               ${["men","women","unisex"].map(c =>
@@ -557,20 +828,26 @@ function showProductForm(product = null) {
               ).join("")}
             </select>
           </label>
+
           <label>PRODUCT IMAGE URL
             <input name="image_url" type="url" value="${esc(product?.image_url || "")}" placeholder="https://...">
           </label>
+
           <label>SIZES
             <input name="sizes" value="${esc(sizes)}" placeholder="S, M, L, XL">
           </label>
+
           <label>DESCRIPTION
             <textarea name="description" rows="5">${esc(product?.description || "")}</textarea>
           </label>
+
           <label class="checkbox-label">
             <input name="is_active" type="checkbox" ${product?.is_active !== false ? "checked" : ""}>
             SHOW PRODUCT ON STORE
           </label>
+
           <p id="formMessage" class="form-message" role="status"></p>
+
           <button class="primary-btn" id="saveProduct" type="submit">
             ${product ? "SAVE CHANGES" : "CREATE PRODUCT"}
           </button>
@@ -636,6 +913,7 @@ async function saveProduct(event) {
       : await supabase.from("products").insert(payload).select("id");
 
     if (result.error) throw result.error;
+
     if (!result.data?.length) {
       throw new Error("No product saved. Check products table RLS policies.");
     }
