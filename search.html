@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f8f6f2">
+  <title>Discover | AURENAR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #f8f6f2;
+      --text: #24221f;
+      --muted: #77716a;
+      --line: #dedad3;
+      --accent: #7a343d;
+      --card: #eeebe5;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, sans-serif;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input, select { font: inherit; }
+
+    .announcement {
+      background: #24221f;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-size: 10px;
+      letter-spacing: 1.3px;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .nav {
+      max-width: 1400px;
+      min-height: 76px;
+      padding: 15px 5%;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .logo {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 34px;
+      letter-spacing: 4px;
+      font-weight: 600;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 26px;
+      align-items: center;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+    }
+
+    .nav-links a:hover,
+    .text-button:hover { color: var(--accent); }
+
+    .text-button {
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 10px;
+      letter-spacing: 1.2px;
+      padding: 8px 0;
+    }
+
+    .mobile-menu {
+      display: none;
+      padding: 18px 5%;
+      border-top: 1px solid var(--line);
+    }
+
+    .mobile-menu:not([hidden]) {
+      display: grid;
+      gap: 18px;
+    }
+
+    .mobile-menu a {
+      font-size: 12px;
+      letter-spacing: 1.5px;
+    }
+
+    .search-panel {
+      display: none;
+      padding: 18px 5%;
+      border-top: 1px solid var(--line);
+    }
+
+    .search-panel.open { display: block; }
+
+    .search-panel form {
+      display: flex;
+      gap: 10px;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .search-panel input {
+      min-width: 0;
+      flex: 1;
+      padding: 12px;
+      border: 1px solid var(--line);
+      background: transparent;
+    }
+
+    .search-panel button {
+      padding: 12px 18px;
+      border: 0;
+      background: var(--text);
+      color: white;
+      cursor: pointer;
+    }
+
+    main {
+      max-width: 1400px;
+      margin: auto;
+      padding: 50px 5% 90px;
+      min-height: 70vh;
+    }
+
+    .eyebrow {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-family: "Cormorant Garamond", serif;
+      font-size: clamp(42px, 7vw, 76px);
+      font-weight: 400;
+      margin: 12px 0;
+    }
+
+    .intro {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+      max-width: 500px;
+    }
+
+    .tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 36px 0 24px;
+      flex-wrap: wrap;
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      border: 1px solid var(--line);
+      background: transparent;
+      padding: 10px 14px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+
+    .filter-btn.active,
+    .filter-btn:hover {
+      background: var(--text);
+      color: white;
+      border-color: var(--text);
+    }
+
+    .sort-select {
+      border: 1px solid var(--line);
+      padding: 10px;
+      background: transparent;
+      color: var(--text);
+      font-size: 11px;
+      max-width: 100%;
+    }
+
+    .result-count {
+      font-size: 11px;
+      color: var(--muted);
+      margin: 20px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 30px 16px;
+    }
+
+    .product-card { min-width: 0; }
+
+    .product-image {
+      display: block;
+      position: relative;
+      aspect-ratio: 3 / 4;
+      overflow: hidden;
+      background: var(--card);
+    }
+
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      transition: transform .45s ease;
+    }
+
+    .product-card:hover .product-image img {
+      transform: scale(1.04);
+    }
+
+    .image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      text-align: center;
+      color: #827b72;
+      font-family: "Cormorant Garamond", serif;
+      font-size: 25px;
+    }
+
+    .product-info { padding: 14px 2px; }
+
+    .product-name {
+      font-size: 12px;
+      line-height: 1.6;
+      margin: 0 0 7px;
+      font-weight: 500;
+    }
+
+    .product-category {
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .product-price {
+      font-size: 12px;
+      letter-spacing: .3px;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      padding: 55px 20px;
+      text-align: center;
+      border: 1px solid var(--line);
+    }
+
+    .empty-state h2 {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 32px;
+      font-weight: 400;
+    }
+
+    .empty-state p {
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--muted);
+    }
+
+    .empty-state a {
+      display: inline-block;
+      margin-top: 12px;
+      background: var(--text);
+      color: white;
+      padding: 13px 20px;
+      font-size: 10px;
+      letter-spacing: 1px;
+    }
+
+    footer {
+      background: #24221f;
+      color: white;
+      padding: 35px 5%;
+      text-align: center;
+    }
+
+    footer .logo { font-size: 29px; }
+    footer p { color: #c5bfb7; font-size: 10px; line-height: 1.8; }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .nav-links { gap: 15px; }
+    }
+
+    @media (max-width: 600px) {
+      .nav { min-height: 64px; padding: 12px 5%; }
+      .logo { font-size: 27px; letter-spacing: 3px; }
+      .nav-links { gap: 13px; }
+      .nav-links .desktop-only { display: none; }
+      .text-button { font-size: 9px; }
+      main { padding-top: 35px; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 10px; }
+      .tools { align-items: flex-start; }
+      .filter-row { gap: 6px; }
+      .filter-btn { padding: 9px 10px; }
+      .sort-select { width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="announcement">
+    COMPLIMENTARY SHIPPING ON ORDERS OVER ₹2,500
+  </div>
+
+  <header>
+    <nav class="nav">
+      <button class="text-button" id="menuToggle" aria-expanded="false">
+        ☰ MENU
+      </button>
+
+      <a class="logo" href="./index.html">AURENAR</a>
+
+      <div class="nav-links">
+        <a class="desktop-only" href="./men.html">MEN</a>
+        <a class="desktop-only" href="./women.html">WOMEN</a>
+        <button class="text-button" id="searchToggle">SEARCH</button>
+        <a href="./account.html">ACCOUNT</a>
+        <a href="./wishlist.html" class="desktop-only">SAVED</a>
+        <a href="./cart.html">BAG <span id="cartCount">0</span></a>
+      </div>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu" hidden>
+      <a href="./index.html">HOME</a>
+      <a href="./men.html">MEN</a>
+      <a href="./women.html">WOMEN</a>
+      <a href="./wishlist.html">WISHLIST</a>
+      <a href="./account.html">MY ACCOUNT</a>
+      <a href="./cart.html">SHOPPING BAG</a>
+    </div>
+
+    <div class="search-panel" id="searchPanel">
+      <form id="searchForm">
+        <input id="searchInput" type="search" placeholder="Search the collection..." aria-label="Search products">
+        <button type="submit">SEARCH</button>
+      </form>
+    </div>
+  </header>
+
+  <main>
+    <div class="eyebrow">THE AURENAR COLLECTION</div>
+    <h1 id="pageTitle">Discover</h1>
+    <p class="intro" id="pageIntro">
+      Considered essentials. Distinctive details. Discover the collection.
+    </p>
+
+    <div class="tools">
+      <div class="filter-row" id="filterRow">
+        <button class="filter-btn active" data-filter="all">ALL</button>
+        <button class="filter-btn" data-filter="men">MEN</button>
+        <button class="filter-btn" data-filter="women">WOMEN</button>
+      </div>
+
+      <select class="sort-select" id="sortSelect" aria-label="Sort products">
+        <option value="featured">Sort: Featured</option>
+        <option value="price-low">Price: Low to High</option>
+        <option value="price-high">Price: High to Low</option>
+        <option value="name">Name: A to Z</option>
+      </select>
+    </div>
+
+    <div class="result-count" id="resultCount">Loading collection…</div>
+    <section class="grid" id="productGrid" aria-live="polite"></section>
+  </main>
+
+  <footer>
+    <div class="logo">AURENAR</div>
+    <p>QUIETLY DISTINCT.</p>
+    <p>© <span id="year"></span> AURENAR. ALL RIGHTS RESERVED.</p>
+  </footer>
+
+  <script type="module">
+    const grid = document.getElementById("productGrid");
+    const resultCount = document.getElementById("resultCount");
+    const pageTitle = document.getElementById("pageTitle");
+    const pageIntro = document.getElementById("pageIntro");
+    const searchInput = document.getElementById("searchInput");
+    const sortSelect = document.getElementById("sortSelect");
+
+    const params = new URLSearchParams(window.location.search);
+    const initialQuery = (params.get("q") || "").trim();
+    const initialGender = (params.get("gender") || "").toLowerCase();
+
+    let products = [];
+    let activeFilter = "all";
+    let searchQuery = initialQuery;
+
+    searchInput.value = searchQuery;
+
+    function prettyText(value) {
+      return String(value || "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    function formatPrice(value) {
+      const price = Number(value);
+      if (!Number.isFinite(price)) return "";
+      return "₹" + price.toLocaleString("en-IN");
+    }
+
+    function emptyState(title, message) {
+      grid.innerHTML = "";
+      const box = document.createElement("div");
+      box.className = "empty-state";
+
+      const heading = document.createElement("h2");
+      heading.textContent = title;
+
+      const paragraph = document.createElement("p");
+      paragraph.textContent = message;
+
+      const link = document.createElement("a");
+      link.href = "./index.html";
+      link.textContent = "BACK TO HOME";
+
+      box.append(heading, paragraph, link);
+      grid.appendChild(box);
+    }
+
+    function renderProducts() {
+      let filtered = products.filter(product => {
+        const text = [
+          product.name,
+          product.category,
+          product.description
+        ].join(" ").toLowerCase();
+
+        const matchesQuery = !searchQuery ||
+          text.includes(searchQuery.toLowerCase());
+
+        const category = String(product.category || "").toLowerCase();
+
+        const isWomen = /women|woman|female|dress|skirt|blouse/.test(category);
+        const isMen = /men|male|shirt|trouser|tailoring/.test(category);
+
+        const matchesGender =
+          activeFilter === "all" ||
+          (activeFilter === "women" && isWomen) ||
+          (activeFilter === "men" && isMen);
+
+        return matchesQuery && matchesGender;
+      });
+
+      if (sortSelect.value === "price-low") {
+        filtered.sort((a, b) => Number(a.price) - Number(b.price));
+      } else if (sortSelect.value === "price-high") {
+        filtered.sort((a, b) => Number(b.price) - Number(a.price));
+      } else if (sortSelect.value === "name") {
+        filtered.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      }
+
+      resultCount.textContent = `${filtered.length} ${filtered.length === 1 ? "PRODUCT" : "PRODUCTS"}`;
+
+      grid.innerHTML = "";
+
+      if (!filtered.length) {
+        emptyState(
+          searchQuery ? "No matches found." : "The collection is taking shape.",
+          searchQuery
+            ? "Try another search term or select a different category."
+            : "Products will appear here once they are available in the collection."
+        );
+        return;
+      }
+
+      filtered.forEach(product => {
+        const card = document.createElement("article");
+        card.className = "product-card";
+
+        const link = document.createElement("a");
+        link.className = "product-image";
+        link.href = `./product.html?id=${encodeURIComponent(product.id)}`;
+        link.setAttribute("aria-label", `View ${product.name}`);
+
+        if (product.image_url) {
+          const image = document.createElement("img");
+          image.src = product.image_url;
+          image.alt = product.name || "AURENAR product";
+          image.loading = "lazy";
+          image.onerror = () => {
+            link.innerHTML = "";
+            const placeholder = document.createElement("div");
+            placeholder.className = "image-placeholder";
+            placeholder.textContent = product.name || "AURENAR";
+            link.appendChild(placeholder);
+          };
+          link.appendChild(image);
+        } else {
+          const placeholder = document.createElement("div");
+          placeholder.className = "image-placeholder";
+          placeholder.textContent = product.name || "AURENAR";
+          link.appendChild(placeholder);
+        }
+
+        const info = document.createElement("div");
+        info.className = "product-info";
+
+        const category = document.createElement("div");
+        category.className = "product-category";
+        category.textContent = prettyText(product.category);
+
+        const name = document.createElement("h2");
+        name.className = "product-name";
+        name.textContent = product.name || "Untitled Product";
+
+        const price = document.createElement("div");
+        price.className = "product-price";
+        price.textContent = formatPrice(product.price);
+
+        info.append(category, name, price);
+        card.append(link, info);
+        grid.appendChild(card);
+      });
+    }
+
+    document.querySelectorAll("[data-filter]").forEach(button => {
+      button.addEventListener("click", () => {
+        activeFilter = button.dataset.filter;
+        document.querySelectorAll("[data-filter]").forEach(item => {
+          item.classList.toggle("active", item === button);
+        });
+        renderProducts();
+      });
+    });
+
+    document.getElementById("searchForm").addEventListener("submit", event => {
+      event.preventDefault();
+      searchQuery = searchInput.value.trim();
+      const url = new URL(window.location.href);
+      if (searchQuery) url.searchParams.set("q", searchQuery);
+      else url.searchParams.delete("q");
+      history.replaceState({}, "", url);
+      renderProducts();
+    });
+
+    sortSelect.addEventListener("change", renderProducts);
+
+    document.getElementById("menuToggle").addEventListener("click", () => {
+      const menu = document.getElementById("mobileMenu");
+      const isOpening = menu.hidden;
+      menu.hidden = !isOpening;
+      document.getElementById("menuToggle").setAttribute("aria-expanded", String(isOpening));
+    });
+
+    document.getElementById("searchToggle").addEventListener("click", () => {
+      document.getElementById("searchPanel").classList.toggle("open");
+      if (document.getElementById("searchPanel").classList.contains("open")) {
+        searchInput.focus();
+      }
+    });
+
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    try {
+      const module = await import("./supabase.js");
+      const supabase = module.default || module.supabase || module.client;
+
+      if (!supabase || typeof supabase.from !== "function") {
+        throw new Error("Supabase client export was not found.");
+      }
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,name,price,image_url,category,sizes,description,is_active,created_at")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      products = data || [];
+
+      if (initialGender === "women" || initialGender === "men") {
+        activeFilter = initialGender;
+        document.querySelectorAll("[data-filter]").forEach(button => {
+          button.classList.toggle("active", button.dataset.filter === activeFilter);
+        });
+      }
+
+      if (initialQuery) {
+        pageTitle.textContent = prettyText(initialQuery);
+        pageIntro.textContent = `Explore the AURENAR collection: ${prettyText(initialQuery)}.`;
+      }
+
+      renderProducts();
+    } catch (error) {
+      console.error("AURENAR product loading error:", error);
+      resultCount.textContent = "Collection unavailable";
+      emptyState(
+        "We’ll be back shortly.",
+        "The product collection could not be loaded. The database connection or permissions may need attention."
+      );
+    }
+  </script>
+</body>
+</html>
