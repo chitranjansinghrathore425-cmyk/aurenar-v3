@@ -1,629 +1,686 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#f8f6f2">
-  <title>Discover | AURENAR</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f4ef">
+<title>Discover | AURENAR</title>
 
-  <style>
-    :root {
-      --bg: #f8f6f2;
-      --text: #24221f;
-      --muted: #77716a;
-      --line: #dedad3;
-      --accent: #7a343d;
-      --card: #eeebe5;
-    }
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    * { box-sizing: border-box; }
+<style>
+:root {
+  --bg: #f7f4ef;
+  --surface: #fffdf9;
+  --text: #22201f;
+  --muted: #77716d;
+  --line: rgba(50, 40, 35, .16);
+  --accent: #80644d;
+  --glow: transparent;
+}
 
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: Inter, sans-serif;
-    }
+* { box-sizing: border-box; }
 
-    a { color: inherit; text-decoration: none; }
-    button, input, select { font: inherit; }
+html { scroll-behavior: smooth; }
 
-    .announcement {
-      background: #24221f;
-      color: white;
-      text-align: center;
-      padding: 10px;
-      font-size: 10px;
-      letter-spacing: 1.3px;
-    }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, sans-serif;
+  transition: background .35s, color .35s;
+}
 
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: var(--bg);
-      border-bottom: 1px solid var(--line);
-    }
+body.men-theme {
+  --bg: #100c0e;
+  --surface: #1b1216;
+  --text: #f7f0ee;
+  --muted: #c0a7ad;
+  --line: rgba(231, 190, 201, .19);
+  --accent: #a32643;
+  --glow: rgba(129, 15, 43, .17);
+}
 
-    .nav {
-      max-width: 1400px;
-      min-height: 76px;
-      padding: 15px 5%;
-      margin: auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-    }
+body.women-theme {
+  --bg: #160e20;
+  --surface: #24152e;
+  --text: #fff3ff;
+  --muted: #d0b5dc;
+  --line: rgba(235, 188, 255, .2);
+  --accent: #d67de9;
+  --glow: rgba(194, 92, 238, .17);
+}
 
-    .logo {
-      font-family: "Cormorant Garamond", serif;
-      font-size: 34px;
-      letter-spacing: 4px;
-      font-weight: 600;
-    }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 15% 0%, var(--glow), transparent 45%),
+    radial-gradient(ellipse at 90% 35%, var(--glow), transparent 38%);
+}
 
-    .nav-links {
-      display: flex;
-      gap: 26px;
-      align-items: center;
-      font-size: 10px;
-      letter-spacing: 1.5px;
-    }
+a { color: inherit; text-decoration: none; }
 
-    .nav-links a:hover,
-    .text-button:hover { color: var(--accent); }
+button, input, select { font: inherit; }
 
-    .text-button {
-      border: 0;
-      background: transparent;
-      color: var(--text);
-      cursor: pointer;
-      font-size: 10px;
-      letter-spacing: 1.2px;
-      padding: 8px 0;
-    }
+button { color: inherit; }
 
-    .mobile-menu {
-      display: none;
-      padding: 18px 5%;
-      border-top: 1px solid var(--line);
-    }
+.announcement {
+  padding: 9px 12px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 2px;
+  line-height: 1.5;
+  background: var(--text);
+  color: var(--bg);
+}
 
-    .mobile-menu:not([hidden]) {
-      display: grid;
-      gap: 18px;
-    }
+body.men-theme .announcement {
+  background: #500d20;
+  color: #fff0f2;
+}
 
-    .mobile-menu a {
-      font-size: 12px;
-      letter-spacing: 1.5px;
-    }
+body.women-theme .announcement {
+  background: linear-gradient(90deg, #59216e, #9c4d9e, #59216e);
+  color: #fff5ff;
+}
 
-    .search-panel {
-      display: none;
-      padding: 18px 5%;
-      border-top: 1px solid var(--line);
-    }
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
 
-    .search-panel.open { display: block; }
+.header-main {
+  min-height: 74px;
+  padding: 0 5%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 15px;
+}
 
-    .search-panel form {
-      display: flex;
-      gap: 10px;
-      max-width: 700px;
-      margin: auto;
-    }
+.menu-button {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 10px;
+  letter-spacing: 1.6px;
+}
 
-    .search-panel input {
-      min-width: 0;
-      flex: 1;
-      padding: 12px;
-      border: 1px solid var(--line);
-      background: transparent;
-    }
+.brand {
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(27px, 4vw, 37px);
+  font-weight: 600;
+  letter-spacing: 5px;
+  white-space: nowrap;
+}
 
-    .search-panel button {
-      padding: 12px 18px;
-      border: 0;
-      background: var(--text);
-      color: white;
-      cursor: pointer;
-    }
+.header-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2.2vw, 23px);
+}
 
-    main {
-      max-width: 1400px;
-      margin: auto;
-      padding: 50px 5% 90px;
-      min-height: 70vh;
-    }
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 25px;
+  height: 30px;
+  opacity: .92;
+}
 
-    .eyebrow {
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
+.icon-link svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
-    h1 {
-      font-family: "Cormorant Garamond", serif;
-      font-size: clamp(42px, 7vw, 76px);
-      font-weight: 400;
-      margin: 12px 0;
-    }
+.count {
+  position: absolute;
+  top: -1px;
+  right: -7px;
+  font-size: 9px;
+  min-width: 14px;
+  text-align: center;
+}
 
-    .intro {
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.8;
-      max-width: 500px;
-    }
+.desktop-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 38px;
+  min-height: 42px;
+  border-top: 1px solid var(--line);
+}
 
-    .tools {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      margin: 36px 0 24px;
-      flex-wrap: wrap;
-    }
+.desktop-nav a {
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 13px 0;
+}
 
-    .filter-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+.desktop-nav a.active {
+  border-bottom: 1px solid var(--accent);
+  color: var(--accent);
+}
 
-    .filter-btn {
-      border: 1px solid var(--line);
-      background: transparent;
-      padding: 10px 14px;
-      font-size: 10px;
-      letter-spacing: 1px;
-      cursor: pointer;
-    }
+.mobile-menu {
+  display: none;
+  padding: 12px 5% 22px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
 
-    .filter-btn.active,
-    .filter-btn:hover {
-      background: var(--text);
-      color: white;
-      border-color: var(--text);
-    }
+.mobile-menu.open { display: block; }
 
-    .sort-select {
-      border: 1px solid var(--line);
-      padding: 10px;
-      background: transparent;
-      color: var(--text);
-      font-size: 11px;
-      max-width: 100%;
-    }
+.mobile-menu a {
+  display: block;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 24px;
+}
 
-    .result-count {
-      font-size: 11px;
-      color: var(--muted);
-      margin: 20px 0;
-    }
+main { min-height: 65vh; }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 30px 16px;
-    }
+.intro {
+  padding: 65px 20px 34px;
+  text-align: center;
+}
 
-    .product-card { min-width: 0; }
+.eyebrow {
+  margin: 0 0 14px;
+  color: var(--accent);
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
 
-    .product-image {
-      display: block;
-      position: relative;
-      aspect-ratio: 3 / 4;
-      overflow: hidden;
-      background: var(--card);
-    }
+h1 {
+  margin: 0;
+  font-family: "Cormorant Garamond", serif;
+  font-size: clamp(42px, 7vw, 72px);
+  font-weight: 400;
+  line-height: .98;
+}
 
-    .product-image img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: cover;
-      transition: transform .45s ease;
-    }
+.intro-copy {
+  margin: 17px auto 0;
+  max-width: 440px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.9;
+}
 
-    .product-card:hover .product-image img {
-      transform: scale(1.04);
-    }
+.search-wrap {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 0 22px 35px;
+}
 
-    .image-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 15px;
-      text-align: center;
-      color: #827b72;
-      font-family: "Cormorant Garamond", serif;
-      font-size: 25px;
-    }
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
 
-    .product-info { padding: 14px 2px; }
+.search-box svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
 
-    .product-name {
-      font-size: 12px;
-      line-height: 1.6;
-      margin: 0 0 7px;
-      font-weight: 500;
-    }
+.search-box input {
+  width: 100%;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 13px;
+  padding: 8px 0;
+}
 
-    .product-category {
-      color: var(--muted);
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
+.search-box input::placeholder { color: var(--muted); }
 
-    .product-price {
-      font-size: 12px;
-      letter-spacing: .3px;
-    }
+.filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 5% 25px;
+  flex-wrap: wrap;
+}
 
-    .empty-state {
-      grid-column: 1 / -1;
-      padding: 55px 20px;
-      text-align: center;
-      border: 1px solid var(--line);
-    }
+.category-tabs {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
 
-    .empty-state h2 {
-      font-family: "Cormorant Garamond", serif;
-      font-size: 32px;
-      font-weight: 400;
-    }
+.tab {
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 10px 15px;
+  font-size: 9px;
+  letter-spacing: 1.1px;
+  cursor: pointer;
+  transition: .2s;
+}
 
-    .empty-state p {
-      font-size: 12px;
-      line-height: 1.8;
-      color: var(--muted);
-    }
+.tab.active, .tab:hover {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
 
-    .empty-state a {
-      display: inline-block;
-      margin-top: 12px;
-      background: var(--text);
-      color: white;
-      padding: 13px 20px;
-      font-size: 10px;
-      letter-spacing: 1px;
-    }
+select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 10px;
+  font-size: 10px;
+  max-width: 100%;
+}
 
-    footer {
-      background: #24221f;
-      color: white;
-      padding: 35px 5%;
-      text-align: center;
-    }
+.result-line {
+  margin: 0 5% 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
 
-    footer .logo { font-size: 29px; }
-    footer p { color: #c5bfb7; font-size: 10px; line-height: 1.8; }
+.products {
+  padding: 0 5% 70px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px 15px;
+}
 
-    @media (max-width: 900px) {
-      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .nav-links { gap: 15px; }
-    }
+.product-card { min-width: 0; }
 
-    @media (max-width: 600px) {
-      .nav { min-height: 64px; padding: 12px 5%; }
-      .logo { font-size: 27px; letter-spacing: 3px; }
-      .nav-links { gap: 13px; }
-      .nav-links .desktop-only { display: none; }
-      .text-button { font-size: 9px; }
-      main { padding-top: 35px; }
-      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 10px; }
-      .tools { align-items: flex-start; }
-      .filter-row { gap: 6px; }
-      .filter-btn { padding: 9px 10px; }
-      .sort-select { width: 100%; }
-    }
-  </style>
+.product-image {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  background: var(--surface);
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform .6s;
+}
+
+.product-card:hover .product-image img { transform: scale(1.035); }
+
+.product-info { padding: 12px 1px; }
+
+.product-name {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .2px;
+  line-height: 1.6;
+}
+
+.product-category {
+  margin: 5px 0;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+}
+
+.product-price {
+  margin: 7px 0 0;
+  font-size: 11px;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  padding: 65px 15px 80px;
+  text-align: center;
+}
+
+.empty-state h2 {
+  margin: 0;
+  font: 400 34px "Cormorant Garamond", serif;
+}
+
+.empty-state p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+footer {
+  padding: 35px 5%;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+.footer-brand {
+  font: 500 27px "Cormorant Garamond", serif;
+  letter-spacing: 4px;
+}
+
+.footer-copy {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1.3px;
+}
+
+@media (min-width: 1200px) {
+  .products { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 35px 22px; }
+}
+
+@media (max-width: 760px) {
+  .header-main { min-height: 65px; padding: 0 16px; gap: 8px; }
+  .brand { font-size: 26px; letter-spacing: 3px; }
+  .header-actions { gap: 11px; }
+  .icon-link { width: 22px; }
+  .icon-link svg { width: 19px; height: 19px; }
+  .desktop-nav { gap: 25px; min-height: 38px; }
+  .desktop-nav a { font-size: 9px; }
+  .intro { padding-top: 49px; }
+  .products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 11px; }
+  .filters { padding-left: 16px; padding-right: 16px; }
+  .result-line { margin-left: 16px; margin-right: 16px; }
+}
+
+@media (max-width: 380px) {
+  .header-main { padding: 0 11px; }
+  .brand { font-size: 22px; letter-spacing: 2px; }
+  .header-actions { gap: 7px; }
+  .menu-button { font-size: 9px; letter-spacing: 1px; }
+  .desktop-nav { gap: 19px; }
+}
+</style>
 </head>
 
 <body>
-  <div class="announcement">
-    COMPLIMENTARY SHIPPING ON ORDERS OVER ₹2,500
+<div class="announcement">COMPLIMENTARY SHIPPING ON ORDERS OVER ₹2,500</div>
+
+<header>
+  <div class="header-main">
+    <button class="menu-button" id="menuToggle" aria-label="Open menu" aria-expanded="false">☰ MENU</button>
+
+    <a class="brand" href="./index.html" aria-label="AURENAR home">AURENAR</a>
+
+    <div class="header-actions">
+      <a class="icon-link" href="./search.html" aria-label="Search">
+        <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+      </a>
+      <a class="icon-link" href="./account.html" aria-label="My account">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 21v-2.1a7.2 7.2 0 0 1 14.4 0V21"/></svg>
+      </a>
+      <a class="icon-link" href="./wishlist.html" aria-label="Wishlist">
+        <svg viewBox="0 0 24 24"><path d="M20.8 8.7c0 5-8.8 11-8.8 11s-8.8-6-8.8-11A4.7 4.7 0 0 1 12 6.1a4.7 4.7 0 0 1 8.8 2.6Z"/></svg>
+      </a>
+      <a class="icon-link" href="./cart.html" aria-label="Shopping bag">
+        <svg viewBox="0 0 24 24"><path d="M4.5 8h15l1 13h-17l1-13Z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/></svg>
+        <span class="count" id="cartCount">0</span>
+      </a>
+    </div>
   </div>
 
-  <header>
-    <nav class="nav">
-      <button class="text-button" id="menuToggle" aria-expanded="false">
-        ☰ MENU
-      </button>
+  <nav class="desktop-nav" aria-label="Main navigation">
+    <a href="./men.html" id="menNav">MEN</a>
+    <a href="./women.html" id="womenNav">WOMEN</a>
+    <a href="./search.html" class="active">DISCOVER</a>
+  </nav>
 
-      <a class="logo" href="./index.html">AURENAR</a>
+  <nav class="mobile-menu" id="mobileMenu" aria-label="Mobile navigation">
+    <a href="./index.html">Home</a>
+    <a href="./men.html">Men</a>
+    <a href="./women.html">Women</a>
+    <a href="./search.html">Discover</a>
+    <a href="./account.html">My account</a>
+    <a href="./wishlist.html">Wishlist</a>
+    <a href="./cart.html">Shopping bag</a>
+  </nav>
+</header>
 
-      <div class="nav-links">
-        <a class="desktop-only" href="./men.html">MEN</a>
-        <a class="desktop-only" href="./women.html">WOMEN</a>
-        <button class="text-button" id="searchToggle">SEARCH</button>
-        <a href="./account.html">ACCOUNT</a>
-        <a href="./wishlist.html" class="desktop-only">SAVED</a>
-        <a href="./cart.html">BAG <span id="cartCount">0</span></a>
-      </div>
-    </nav>
-
-    <div class="mobile-menu" id="mobileMenu" hidden>
-      <a href="./index.html">HOME</a>
-      <a href="./men.html">MEN</a>
-      <a href="./women.html">WOMEN</a>
-      <a href="./wishlist.html">WISHLIST</a>
-      <a href="./account.html">MY ACCOUNT</a>
-      <a href="./cart.html">SHOPPING BAG</a>
-    </div>
-
-    <div class="search-panel" id="searchPanel">
-      <form id="searchForm">
-        <input id="searchInput" type="search" placeholder="Search the collection..." aria-label="Search products">
-        <button type="submit">SEARCH</button>
-      </form>
-    </div>
-  </header>
-
-  <main>
-    <div class="eyebrow">THE AURENAR COLLECTION</div>
+<main>
+  <section class="intro">
+    <p class="eyebrow" id="eyebrow">THE AURENAR COLLECTION</p>
     <h1 id="pageTitle">Discover</h1>
-    <p class="intro" id="pageIntro">
-      Considered essentials. Distinctive details. Discover the collection.
-    </p>
+    <p class="intro-copy" id="introCopy">Considered pieces. Timeless character. Find something that feels like you.</p>
+  </section>
 
-    <div class="tools">
-      <div class="filter-row" id="filterRow">
-        <button class="filter-btn active" data-filter="all">ALL</button>
-        <button class="filter-btn" data-filter="men">MEN</button>
-        <button class="filter-btn" data-filter="women">WOMEN</button>
-      </div>
+  <div class="search-wrap">
+    <label class="search-box">
+      <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+      <input id="searchInput" type="search" placeholder="Search pieces, colours, categories..." autocomplete="off">
+    </label>
+  </div>
 
-      <select class="sort-select" id="sortSelect" aria-label="Sort products">
-        <option value="featured">Sort: Featured</option>
-        <option value="price-low">Price: Low to High</option>
-        <option value="price-high">Price: High to Low</option>
-        <option value="name">Name: A to Z</option>
-      </select>
+  <section class="filters">
+    <div class="category-tabs" id="categoryTabs">
+      <button class="tab active" data-category="all">ALL PIECES</button>
+      <button class="tab" data-category="men">MEN</button>
+      <button class="tab" data-category="women">WOMEN</button>
     </div>
 
-    <div class="result-count" id="resultCount">Loading collection…</div>
-    <section class="grid" id="productGrid" aria-live="polite"></section>
-  </main>
+    <select id="sortSelect" aria-label="Sort products">
+      <option value="featured">Featured</option>
+      <option value="price-low">Price: low to high</option>
+      <option value="price-high">Price: high to low</option>
+      <option value="name">Name: A to Z</option>
+    </select>
+  </section>
 
-  <footer>
-    <div class="logo">AURENAR</div>
-    <p>QUIETLY DISTINCT.</p>
-    <p>© <span id="year"></span> AURENAR. ALL RIGHTS RESERVED.</p>
-  </footer>
+  <div class="result-line">
+    <span id="resultTitle">The collection</span>
+    <span id="resultCount"></span>
+  </div>
 
-  <script type="module">
-    const grid = document.getElementById("productGrid");
-    const resultCount = document.getElementById("resultCount");
-    const pageTitle = document.getElementById("pageTitle");
-    const pageIntro = document.getElementById("pageIntro");
-    const searchInput = document.getElementById("searchInput");
-    const sortSelect = document.getElementById("sortSelect");
+  <section class="products" id="products">
+    <div class="empty-state">
+      <h2>One moment</h2>
+      <p>Preparing the collection...</p>
+    </div>
+  </section>
+</main>
 
-    const params = new URLSearchParams(window.location.search);
-    const initialQuery = (params.get("q") || "").trim();
-    const initialGender = (params.get("gender") || "").toLowerCase();
+<footer>
+  <div class="footer-brand">AURENAR</div>
+  <div class="footer-copy">QUIETLY DISTINCT · MADE TO BE REMEMBERED</div>
+</footer>
 
-    let products = [];
-    let activeFilter = "all";
-    let searchQuery = initialQuery;
+<script>
+const params = new URLSearchParams(location.search);
+const initialGender = (params.get("gender") || "").toLowerCase();
+const validGender = ["men", "women"].includes(initialGender) ? initialGender : "";
 
-    searchInput.value = searchQuery;
+if (validGender) document.body.classList.add(validGender + "-theme");
 
-    function prettyText(value) {
-      return String(value || "")
-        .replace(/[-_]+/g, " ")
-        .replace(/\b\w/g, letter => letter.toUpperCase());
+const title = document.getElementById("pageTitle");
+const eyebrow = document.getElementById("eyebrow");
+const introCopy = document.getElementById("introCopy");
+const resultTitle = document.getElementById("resultTitle");
+
+if (validGender === "men") {
+  title.textContent = "The Men’s Edit";
+  eyebrow.textContent = "AURENAR · MEN";
+  introCopy.textContent = "Quiet confidence. Strong silhouettes. Pieces with a point of view.";
+  resultTitle.textContent = "The men’s collection";
+} else if (validGender === "women") {
+  title.textContent = "The Women’s Edit";
+  eyebrow.textContent = "AURENAR · WOMEN";
+  introCopy.textContent = "A softer kind of statement. Discover pieces with their own presence.";
+  resultTitle.textContent = "The women’s collection";
+}
+
+document.getElementById("menuToggle").addEventListener("click", () => {
+  const menu = document.getElementById("mobileMenu");
+  const button = document.getElementById("menuToggle");
+  const open = menu.classList.toggle("open");
+  button.setAttribute("aria-expanded", String(open));
+  button.textContent = open ? "× CLOSE" : "☰ MENU";
+});
+
+const searchInput = document.getElementById("searchInput");
+const sortSelect = document.getElementById("sortSelect");
+const productsContainer = document.getElementById("products");
+const resultCount = document.getElementById("resultCount");
+let products = [];
+let activeCategory = validGender || "all";
+
+document.querySelectorAll(".tab").forEach(button => {
+  button.classList.toggle("active", button.dataset.category === activeCategory);
+  button.addEventListener("click", () => {
+    activeCategory = button.dataset.category;
+    document.querySelectorAll(".tab").forEach(tab =>
+      tab.classList.toggle("active", tab === button)
+    );
+    applyFilters();
+  });
+});
+
+searchInput.addEventListener("input", applyFilters);
+sortSelect.addEventListener("change", applyFilters);
+
+function safeText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+}
+
+function productGender(product) {
+  const category = String(product.category || "").toLowerCase();
+  if (category.includes("women") || category.includes("woman")) return "women";
+  if (category.includes("men") || category.includes("man")) return "men";
+  return "";
+}
+
+function renderProducts(items) {
+  if (!items.length) {
+    productsContainer.innerHTML = `
+      <div class="empty-state">
+        <h2>Nothing here just yet</h2>
+        <p>Try another search or category.<br>New pieces will appear here when added to the collection.</p>
+      </div>`;
+    resultCount.textContent = "0 pieces";
+    return;
+  }
+
+  resultCount.textContent = items.length + (items.length === 1 ? " piece" : " pieces");
+
+  productsContainer.innerHTML = items.map(product => {
+    const gender = productGender(product) || activeCategory || validGender;
+    const image = safeText(product.image_url || "");
+    const name = safeText(product.name || "AURENAR piece");
+    const category = safeText(product.category || "Collection");
+    const price = Number(product.price);
+    const priceText = Number.isFinite(price)
+      ? "₹" + price.toLocaleString("en-IN")
+      : "";
+
+    const link = "./product.html?id=" + encodeURIComponent(product.id) +
+      (gender ? "&gender=" + encodeURIComponent(gender) : "");
+
+    return `
+      <article class="product-card">
+        <a href="${link}" aria-label="${name}">
+          <div class="product-image">
+            ${image ? `<img src="${image}" alt="${name}" loading="lazy">` : ""}
+          </div>
+          <div class="product-info">
+            <p class="product-name">${name}</p>
+            <p class="product-category">${category}</p>
+            <p class="product-price">${priceText}</p>
+          </div>
+        </a>
+      </article>`;
+  }).join("");
+}
+
+function applyFilters() {
+  const query = searchInput.value.trim().toLowerCase();
+  let filtered = products.filter(product => {
+    const gender = productGender(product);
+    const categoryMatch = activeCategory === "all" ||
+      gender === activeCategory ||
+      String(product.category || "").toLowerCase() === activeCategory;
+
+    const searchable = [
+      product.name, product.category, product.description
+    ].join(" ").toLowerCase();
+
+    return categoryMatch && searchable.includes(query);
+  });
+
+  const sort = sortSelect.value;
+  if (sort === "price-low") filtered.sort((a, b) => Number(a.price) - Number(b.price));
+  if (sort === "price-high") filtered.sort((a, b) => Number(b.price) - Number(a.price));
+  if (sort === "name") filtered.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+  renderProducts(filtered);
+}
+
+async function loadProducts() {
+  try {
+    const module = await import("./supabase.js");
+    const client = module.default || module.supabase || module.client;
+
+    if (!client || typeof client.from !== "function") {
+      throw new Error("Supabase client export was not found.");
     }
 
-    function formatPrice(value) {
-      const price = Number(value);
-      if (!Number.isFinite(price)) return "";
-      return "₹" + price.toLocaleString("en-IN");
-    }
+    const { data, error } = await client
+      .from("products")
+      .select("id,name,price,image_url,category,description,is_active")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
 
-    function emptyState(title, message) {
-      grid.innerHTML = "";
-      const box = document.createElement("div");
-      box.className = "empty-state";
+    if (error) throw error;
 
-      const heading = document.createElement("h2");
-      heading.textContent = title;
+    products = data || [];
+    applyFilters();
+  } catch (error) {
+    console.error("AURENAR product loading error:", error);
+    productsContainer.innerHTML = `
+      <div class="empty-state">
+        <h2>The collection is taking a moment</h2>
+        <p>Products could not be loaded right now.<br>Please check the product database connection and permissions.</p>
+      </div>`;
+    resultCount.textContent = "";
+  }
+}
 
-      const paragraph = document.createElement("p");
-      paragraph.textContent = message;
-
-      const link = document.createElement("a");
-      link.href = "./index.html";
-      link.textContent = "BACK TO HOME";
-
-      box.append(heading, paragraph, link);
-      grid.appendChild(box);
-    }
-
-    function renderProducts() {
-      let filtered = products.filter(product => {
-        const text = [
-          product.name,
-          product.category,
-          product.description
-        ].join(" ").toLowerCase();
-
-        const matchesQuery = !searchQuery ||
-          text.includes(searchQuery.toLowerCase());
-
-        const category = String(product.category || "").toLowerCase();
-
-        const isWomen = /women|woman|female|dress|skirt|blouse/.test(category);
-        const isMen = /men|male|shirt|trouser|tailoring/.test(category);
-
-        const matchesGender =
-          activeFilter === "all" ||
-          (activeFilter === "women" && isWomen) ||
-          (activeFilter === "men" && isMen);
-
-        return matchesQuery && matchesGender;
-      });
-
-      if (sortSelect.value === "price-low") {
-        filtered.sort((a, b) => Number(a.price) - Number(b.price));
-      } else if (sortSelect.value === "price-high") {
-        filtered.sort((a, b) => Number(b.price) - Number(a.price));
-      } else if (sortSelect.value === "name") {
-        filtered.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-      }
-
-      resultCount.textContent = `${filtered.length} ${filtered.length === 1 ? "PRODUCT" : "PRODUCTS"}`;
-
-      grid.innerHTML = "";
-
-      if (!filtered.length) {
-        emptyState(
-          searchQuery ? "No matches found." : "The collection is taking shape.",
-          searchQuery
-            ? "Try another search term or select a different category."
-            : "Products will appear here once they are available in the collection."
-        );
-        return;
-      }
-
-      filtered.forEach(product => {
-        const card = document.createElement("article");
-        card.className = "product-card";
-
-        const link = document.createElement("a");
-        link.className = "product-image";
-        link.href = `./product.html?id=${encodeURIComponent(product.id)}`;
-        link.setAttribute("aria-label", `View ${product.name}`);
-
-        if (product.image_url) {
-          const image = document.createElement("img");
-          image.src = product.image_url;
-          image.alt = product.name || "AURENAR product";
-          image.loading = "lazy";
-          image.onerror = () => {
-            link.innerHTML = "";
-            const placeholder = document.createElement("div");
-            placeholder.className = "image-placeholder";
-            placeholder.textContent = product.name || "AURENAR";
-            link.appendChild(placeholder);
-          };
-          link.appendChild(image);
-        } else {
-          const placeholder = document.createElement("div");
-          placeholder.className = "image-placeholder";
-          placeholder.textContent = product.name || "AURENAR";
-          link.appendChild(placeholder);
-        }
-
-        const info = document.createElement("div");
-        info.className = "product-info";
-
-        const category = document.createElement("div");
-        category.className = "product-category";
-        category.textContent = prettyText(product.category);
-
-        const name = document.createElement("h2");
-        name.className = "product-name";
-        name.textContent = product.name || "Untitled Product";
-
-        const price = document.createElement("div");
-        price.className = "product-price";
-        price.textContent = formatPrice(product.price);
-
-        info.append(category, name, price);
-        card.append(link, info);
-        grid.appendChild(card);
-      });
-    }
-
-    document.querySelectorAll("[data-filter]").forEach(button => {
-      button.addEventListener("click", () => {
-        activeFilter = button.dataset.filter;
-        document.querySelectorAll("[data-filter]").forEach(item => {
-          item.classList.toggle("active", item === button);
-        });
-        renderProducts();
-      });
-    });
-
-    document.getElementById("searchForm").addEventListener("submit", event => {
-      event.preventDefault();
-      searchQuery = searchInput.value.trim();
-      const url = new URL(window.location.href);
-      if (searchQuery) url.searchParams.set("q", searchQuery);
-      else url.searchParams.delete("q");
-      history.replaceState({}, "", url);
-      renderProducts();
-    });
-
-    sortSelect.addEventListener("change", renderProducts);
-
-    document.getElementById("menuToggle").addEventListener("click", () => {
-      const menu = document.getElementById("mobileMenu");
-      const isOpening = menu.hidden;
-      menu.hidden = !isOpening;
-      document.getElementById("menuToggle").setAttribute("aria-expanded", String(isOpening));
-    });
-
-    document.getElementById("searchToggle").addEventListener("click", () => {
-      document.getElementById("searchPanel").classList.toggle("open");
-      if (document.getElementById("searchPanel").classList.contains("open")) {
-        searchInput.focus();
-      }
-    });
-
-    document.getElementById("year").textContent = new Date().getFullYear();
-
-    try {
-      const module = await import("./supabase.js");
-      const supabase = module.default || module.supabase || module.client;
-
-      if (!supabase || typeof supabase.from !== "function") {
-        throw new Error("Supabase client export was not found.");
-      }
-
-      const { data, error } = await supabase
-        .from("products")
-        .select("id,name,price,image_url,category,sizes,description,is_active,created_at")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      products = data || [];
-
-      if (initialGender === "women" || initialGender === "men") {
-        activeFilter = initialGender;
-        document.querySelectorAll("[data-filter]").forEach(button => {
-          button.classList.toggle("active", button.dataset.filter === activeFilter);
-        });
-      }
-
-      if (initialQuery) {
-        pageTitle.textContent = prettyText(initialQuery);
-        pageIntro.textContent = `Explore the AURENAR collection: ${prettyText(initialQuery)}.`;
-      }
-
-      renderProducts();
-    } catch (error) {
-      console.error("AURENAR product loading error:", error);
-      resultCount.textContent = "Collection unavailable";
-      emptyState(
-        "We’ll be back shortly.",
-        "The product collection could not be loaded. The database connection or permissions may need attention."
-      );
-    }
-  </script>
+loadProducts();
+</script>
 </body>
 </html>
