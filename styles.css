@@ -1298,3 +1298,180 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+/* AURENAR — Product page drawers */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.drawer {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  right: 0;
+  width: min(460px, 100%);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #f7f6f2;
+  color: #171715;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.08);
+  transform: translateX(105%);
+  visibility: hidden;
+  transition: transform 0.3s ease, visibility 0.3s ease;
+}
+
+.drawer.open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.drawer--wide {
+  width: min(520px, 100%);
+}
+
+.drawer--checkout {
+  width: min(560px, 100%);
+}
+
+.drawer-head {
+  min-height: 76px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #dedbd4;
+}
+
+.drawer-head h2 {
+  margin: 0;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.close-btn {
+  width: 38px;
+  height: 38px;
+  font-size: 27px;
+}
+
+.drawer-body,
+.search-wrap {
+  padding: 22px;
+  overflow-y: auto;
+}
+
+.drawer-foot {
+  margin-top: auto;
+  padding: 20px 22px;
+  border-top: 1px solid #dedbd4;
+}
+
+.search-wrap input,
+.checkout-form input,
+.auth-form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px;
+  border: 1px solid #c9c5bc;
+  background: #fff;
+  color: #171715;
+}
+
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid #dedbd4;
+}
+
+.search-result img {
+  width: 58px;
+  height: 72px;
+  object-fit: cover;
+}
+
+.checkout-form {
+  display: grid;
+  gap: 14px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.primary-btn,
+.secondary-btn {
+  min-height: 48px;
+  padding: 12px 18px;
+  border: 1px solid #171715;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.primary-btn {
+  background: #171715;
+  color: #fff;
+}
+
+.secondary-btn {
+  background: transparent;
+  color: #171715;
+}
+
+.empty-state,
+.form-message {
+  padding: 18px 0;
+  color: #77746e;
+  font-size: 13px;
+}
+
+.toast {
+  position: fixed;
+  z-index: 120;
+  left: 50%;
+  bottom: 24px;
+  padding: 12px 18px;
+  background: #171715;
+  color: white;
+  transform: translate(-50%, 20px);
+  opacity: 0;
+  visibility: hidden;
+  transition: 0.2s ease;
+}
+
+.toast.show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .drawer-head {
+    min-height: 65px;
+    padding: 14px 17px;
+  }
+
+  .drawer-body,
+  .search-wrap {
+    padding: 17px;
+  }
+}
