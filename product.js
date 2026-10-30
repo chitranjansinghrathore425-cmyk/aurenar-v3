@@ -1,3 +1,4 @@
+
 import { supabase } from "./supabase-client.js";
 
 const CART_KEY = "aurenar_cart";
@@ -8,7 +9,6 @@ let currentProduct = null;
 let selectedSize = "";
 let galleryImages = [];
 let galleryIndex = 0;
-let touchStartX = 0;
 
 const $ = (id) => document.getElementById(id);
 
@@ -26,13 +26,23 @@ function saveStorage(key, value) {
 }
 
 function escapeHTML(value = "") {
-  return String(value).replace(/[&<>"']/g, char => ({
+  return String(value).replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
     '"': "&quot;",
     "'": "&#39;"
-  })[char]);
+  }[char]));
+}
+
+function safeImage(url) {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "";
+  } catch {
+    return "";
+  }
 }
 
 function money(value) {
@@ -45,10 +55,10 @@ function toast(message) {
   element.textContent = message;
   element.classList.add("show");
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => element.classList.remove("show"), 2400);
+  toast.timer = setTimeout(() => element.classList.remove("show"), 2500);
 }
 
-function getImages(product) {
+function normalizeProduct(product) {
   let images = [];
 
   if (Array.isArray(product.images)) {
@@ -57,178 +67,202 @@ function getImages(product) {
     try {
       const parsed = JSON.parse(product.images);
       if (Array.isArray(parsed)) images = parsed;
-    } catch {
-      images = product.images.split(",").map(item => item.trim());
-    }
+    } catch {}
   }
 
   if (product.image_url) images.unshift(product.image_url);
 
-  return [...new Set(images.filter(url =>
-    typeof url === "string" && /^https?:\/\//i.test(url)
-  ))];
+  images = [...new Set(images.map(safeImage).filter(Boolean))];
+
+  return {
+    ...product,
+    id: String(product.id),
+    name: product.name || "AURENAR Product",
+    price: Number(product.price || 0),
+    images,
+    sizes: Array.isArray(product.sizes)
+      ? product.sizes
+      : typeof product.sizes === "string"
+        ? product.sizes.split(",").map(size => size.trim()).filter(Boolean)
+        : []
+  };
 }
 
-function getSizes(product) {
-  let sizes = product.sizes || [];
-
-  if (typeof sizes === "string") {
-    try {
-      sizes = JSON.parse(sizes);
-    } catch {
-      sizes = sizes.split(",").map(size => size.trim());
-    }
-  }
-
-  if (!Array.isArray(sizes)) sizes = [];
-  return sizes.map(size => String(size).trim()).filter(Boolean);
-}
-
-function getCart() {
-  return readStorage(CART_KEY);
-}
-
-function saveCart(cart) {
-  saveStorage(CART_KEY, cart);
-  updateBagCount();
-}
-
-function getWishlist() {
-  return readStorage(WISH_KEY);
-}
-
-function saveWishlist(items) {
-  saveStorage(WISH_KEY, items);
-  updateWishlistButton();
-}
-
-function updateBagCount() {
-  const count = getCart().reduce((total, item) => {
-    return total + Number(item.qty ?? item.quantity ?? 1);
-  }, 0);
-
-  if ($("bagCount")) $("bagCount").textContent = count;
-}
-
-function updateWishlistButton() {
-  const button = $("productHeart");
-  if (!button || !currentProduct) return;
-
-  const saved = getWishlist().some(item =>
-    String(typeof item === "object" ? item.id : item) === String(currentProduct.id)
-  );
-
-  button.classList.toggle("active", saved);
-  button.textContent = saved ? "♥" : "♡";
-}
-
-function showDrawer(id) {
+function openDrawer(id) {
   closeDrawers();
   const drawer = $(id);
   if (!drawer) return;
   drawer.classList.add("open");
-  $("overlay")?.classList.add("open");
+  $("overlay")?.classList.add("show");
   document.body.style.overflow = "hidden";
 }
 
 function closeDrawers() {
-  document.querySelectorAll(".p-drawer").forEach(drawer => {
+  document.querySelectorAll(".drawer.open").forEach(drawer => {
     drawer.classList.remove("open");
   });
-
-  $("overlay")?.classList.remove("open");
+  $("overlay")?.classList.remove("show");
   document.body.style.overflow = "";
+}
+
+function openSizeGuide() {
+  $("sizeModal")?.classList.add("open");
+}
+
+function closeSizeGuide() {
+  $("sizeModal")?.classList.remove("open");
+}
+
+function getProductIdFromURL() {
+  const params = new URLSearchParams(location.search);
+  return params.get("id") || params.get("slug");
+}
+
+function findProductFromURL() {
+  const requested = getProductIdFromURL();
+
+  if (!requested) return null;
+
+  return products.find(product =>
+    String(product.id) === String(requested) ||
+    String(product.slug || "") === String(requested)
+  ) || null;
 }
 
 function renderGallery() {
   const mainImage = $("mainImage");
   const thumbs = $("galleryThumbs");
 
+  if (!mainImage || !thumbs) return;
+
   if (!galleryImages.length) {
-    mainImage.src = "";
-    mainImage.alt = "Image unavailable";
+    mainImage.removeAttribute("src");
+    mainImage.alt = "Product image unavailable";
     thumbs.innerHTML = "";
+    $("galleryCount").textContent = "0 / 0";
     return;
   }
 
   galleryIndex = Math.max(0, Math.min(galleryIndex, galleryImages.length - 1));
+
   mainImage.src = galleryImages[galleryIndex];
   mainImage.alt = currentProduct?.name || "AURENAR product";
+  $("galleryCount").textContent = `${galleryIndex + 1} / ${galleryImages.length}`;
 
   thumbs.innerHTML = galleryImages.map((image, index) => `
-    <button class="p-thumb ${index === galleryIndex ? "active" : ""}" data-image-index="${index}" aria-label="View image ${index + 1}">
-      <img src="${escapeHTML(image)}" alt="">
+    <button class="gallery-thumb ${index === galleryIndex ? "selected" : ""}"
+      type="button" data-image-index="${index}" aria-label="View image ${index + 1}">
+      <img src="${image}" alt="">
     </button>
   `).join("");
-
-  $("prevImage").style.display = galleryImages.length > 1 ? "" : "none";
-  $("nextImage").style.display = galleryImages.length > 1 ? "" : "none";
 }
 
-function changeImage(index) {
+function changeImage(direction) {
   if (!galleryImages.length) return;
-  galleryIndex = (index + galleryImages.length) % galleryImages.length;
+  galleryIndex = (galleryIndex + direction + galleryImages.length) % galleryImages.length;
   renderGallery();
 }
 
 function renderSizes() {
   const container = $("sizeOptions");
-  const sizes = getSizes(currentProduct);
+  if (!container || !currentProduct) return;
 
-  if (!sizes.length) {
-    selectedSize = "";
-    container.innerHTML = `<p class="p-note">Size selection is not available for this product.</p>`;
-    return;
-  }
+  const sizes = currentProduct.sizes.length
+    ? currentProduct.sizes
+    : ["S", "M", "L", "XL"];
 
   if (!sizes.includes(selectedSize)) selectedSize = "";
 
   container.innerHTML = sizes.map(size => `
-    <button class="p-size ${selectedSize === size ? "selected" : ""}" data-size="${escapeHTML(size)}">
+    <button type="button"
+      class="size-option ${selectedSize === size ? "selected" : ""}"
+      data-size="${escapeHTML(size)}">
       ${escapeHTML(size)}
     </button>
   `).join("");
 }
 
+function isWishlisted(id) {
+  return readStorage(WISH_KEY).some(item => String(item) === String(id));
+}
+
+function updateWishlistButton() {
+  const button = $("productHeart");
+  if (!button || !currentProduct) return;
+  button.textContent = isWishlisted(currentProduct.id) ? "♥" : "♡";
+  button.setAttribute("aria-pressed", String(isWishlisted(currentProduct.id)));
+}
+
+function toggleWishlist(id) {
+  let wishlist = readStorage(WISH_KEY);
+  const exists = wishlist.some(item => String(item) === String(id));
+
+  wishlist = exists
+    ? wishlist.filter(item => String(item) !== String(id))
+    : [...wishlist, id];
+
+  saveStorage(WISH_KEY, wishlist);
+  updateWishlistButton();
+  toast(exists ? "Removed from wishlist" : "Added to wishlist");
+}
+
 function renderProduct() {
   if (!currentProduct) return;
 
-  $("productName").textContent = currentProduct.name || "AURENAR Product";
+  $("productName").textContent = currentProduct.name;
   $("productPrice").textContent = money(currentProduct.price);
-  $("productColour").textContent = currentProduct.color || currentProduct.colour || "As shown";
-  $("productDescription").textContent =
-    currentProduct.description || "A considered essential from the AURENAR collection.";
-  $("productDetailsText").textContent =
-    currentProduct.details || "Designed with attention to fabric, fit and finish.";
-  $("breadcrumbName").textContent = currentProduct.name || "PRODUCT";
-  document.title = `${currentProduct.name || "Product"} | AURENAR`;
+  $("productColour").textContent = currentProduct.colour
+    ? `Colour: ${currentProduct.colour}`
+    : "";
 
-  galleryImages = getImages(currentProduct);
+  $("productDescription").textContent =
+    currentProduct.description || "Discover the details of this AURENAR piece.";
+
+  $("productDetailsText").textContent =
+    currentProduct.material || "Designed with attention to fabric, fit and finish.";
+
+  galleryImages = currentProduct.images;
   galleryIndex = 0;
+
   renderGallery();
   renderSizes();
   updateWishlistButton();
 }
 
+function getCart() {
+  return readStorage(CART_KEY).map(item => ({
+    id: String(item.id),
+    size: item.size || "",
+    qty: Math.max(1, Number(item.qty || item.quantity || 1))
+  }));
+}
+
+function saveCart(cart) {
+  saveStorage(CART_KEY, cart);
+  updateBagCount();
+  renderBag();
+}
+
+function updateBagCount() {
+  const count = getCart().reduce((sum, item) => sum + item.qty, 0);
+  if ($("bagCount")) $("bagCount").textContent = count;
+}
+
 function addToBag() {
   if (!currentProduct) return;
 
-  const sizes = getSizes(currentProduct);
-  if (sizes.length && !selectedSize) {
-    $("productMessage").textContent = "Please select a size first.";
-    toast("Please select a size.");
+  if (!selectedSize) {
+    toast("Please select a size first");
     return;
   }
 
   const cart = getCart();
   const existing = cart.find(item =>
-    String(item.id) === String(currentProduct.id) &&
-    String(item.size || "") === selectedSize
+    item.id === currentProduct.id && item.size === selectedSize
   );
 
   if (existing) {
-    existing.qty = Number(existing.qty ?? existing.quantity ?? 1) + 1;
-    delete existing.quantity;
+    existing.qty += 1;
   } else {
     cart.push({
       id: currentProduct.id,
@@ -238,498 +272,383 @@ function addToBag() {
   }
 
   saveCart(cart);
-  $("productMessage").textContent = "Added to your bag.";
-  toast("Added to your bag.");
+  toast("Added to your bag");
 }
 
-function toggleWishlist() {
-  if (!currentProduct) return;
-
-  let wishlist = getWishlist();
-  const id = String(currentProduct.id);
-
-  const exists = wishlist.some(item =>
-    String(typeof item === "object" ? item.id : item) === id
+function changeCartQuantity(id, size, amount) {
+  const cart = getCart();
+  const item = cart.find(entry =>
+    entry.id === String(id) && entry.size === (size || "")
   );
 
-  if (exists) {
-    wishlist = wishlist.filter(item =>
-      String(typeof item === "object" ? item.id : item) !== id
-    );
-    toast("Removed from wishlist.");
-  } else {
-    wishlist.push(id);
-    toast("Added to wishlist.");
-  }
+  if (!item) return;
 
-  saveWishlist(wishlist);
+  item.qty += amount;
+  saveCart(cart.filter(entry => entry.qty > 0));
 }
 
-function findProduct(id) {
-  return products.find(product => String(product.id) === String(id));
-}
-
-function cartItemProduct(item) {
-  return findProduct(item.id);
+function removeCartItem(id, size) {
+  const cart = getCart().filter(item =>
+    !(item.id === String(id) && item.size === (size || ""))
+  );
+  saveCart(cart);
 }
 
 function renderBag() {
-  const cart = getCart();
   const body = $("bagBody");
   const foot = $("bagFoot");
+  if (!body || !foot) return;
+
+  const cart = getCart();
 
   if (!cart.length) {
-    body.innerHTML = `<p class="p-empty">Your bag is currently empty.</p>`;
-    foot.innerHTML = `<button onclick="location.href='/search.html'">DISCOVER THE COLLECTION</button>`;
+    body.innerHTML = `<p>Your bag is currently empty.</p><a href="/search.html">DISCOVER COLLECTION</a>`;
+    foot.innerHTML = "";
     return;
   }
 
   let subtotal = 0;
 
-  body.innerHTML = cart.map((item, index) => {
-    const product = cartItemProduct(item);
+  body.innerHTML = cart.map(item => {
+    const product = products.find(product => product.id === item.id);
     if (!product) {
       return `
-        <div class="p-cart-row">
-          <div></div>
-          <div>
-            <h3>Product unavailable</h3>
-            <p>This item is no longer available.</p>
-            <button class="p-remove" data-remove-index="${index}">REMOVE</button>
-          </div>
-        </div>
-      `;
+        <div style="padding:12px 0;border-bottom:1px solid #333">
+          <p>Product unavailable</p>
+          <button class="text-button" data-remove-id="${escapeHTML(item.id)}"
+            data-remove-size="${escapeHTML(item.size)}">REMOVE</button>
+        </div>`;
     }
 
-    const qty = Number(item.qty ?? item.quantity ?? 1);
-    subtotal += Number(product.price || 0) * qty;
-    const image = getImages(product)[0] || "";
+    const lineTotal = product.price * item.qty;
+    subtotal += lineTotal;
+    const image = product.images[0] || "";
 
     return `
-      <div class="p-cart-row">
-        <img src="${escapeHTML(image)}" alt="${escapeHTML(product.name)}">
-        <div>
-          <h3>${escapeHTML(product.name)}</h3>
+      <div style="display:flex;gap:13px;padding:12px 0;border-bottom:1px solid #333">
+        ${image ? `<img src="${image}" alt="" style="width:82px;height:108px;object-fit:cover">` : ""}
+        <div style="flex:1">
+          <strong>${escapeHTML(product.name)}</strong>
+          <p style="font-size:12px;color:#aaa">Size: ${escapeHTML(item.size || "Not selected")}</p>
           <p>${money(product.price)}</p>
-          <p>Size: ${escapeHTML(item.size || "One size")}</p>
-          <div class="p-qty">
-            <button data-qty-index="${index}" data-change="-1">−</button>
-            <span>${qty}</span>
-            <button data-qty-index="${index}" data-change="1">+</button>
-            <button class="p-remove" data-remove-index="${index}">REMOVE</button>
+          <div style="display:flex;gap:13px;align-items:center">
+            <button class="secondary" data-qty="-1" data-id="${escapeHTML(item.id)}" data-size="${escapeHTML(item.size)}">−</button>
+            <span>${item.qty}</span>
+            <button class="secondary" data-qty="1" data-id="${escapeHTML(item.id)}" data-size="${escapeHTML(item.size)}">+</button>
+            <button class="text-button" data-remove-id="${escapeHTML(item.id)}" data-remove-size="${escapeHTML(item.size)}">REMOVE</button>
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join("");
 
   const shipping = subtotal === 0 || subtotal >= 2500 ? 0 : 199;
   const total = subtotal + shipping;
 
   foot.innerHTML = `
-    <div class="p-total"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
-    <div class="p-total"><span>Shipping</span><strong>${shipping ? money(shipping) : "Complimentary"}</strong></div>
-    <div class="p-total"><strong>Total</strong><strong>${money(total)}</strong></div>
-    <p class="p-note">Shipping is complimentary on orders over ₹2,500.</p>
-    <button id="openCheckoutBtn">CONTINUE TO CHECKOUT</button>
-  `;
-}
-
-function updateCartQuantity(index, change) {
-  const cart = getCart();
-  if (!cart[index]) return;
-
-  const qty = Number(cart[index].qty ?? cart[index].quantity ?? 1) + change;
-
-  if (qty <= 0) {
-    cart.splice(index, 1);
-  } else {
-    cart[index].qty = qty;
-    delete cart[index].quantity;
-  }
-
-  saveCart(cart);
-  renderBag();
-}
-
-function removeCartItem(index) {
-  const cart = getCart();
-  cart.splice(index, 1);
-  saveCart(cart);
-  renderBag();
+    <p style="display:flex;justify-content:space-between">Subtotal <span>${money(subtotal)}</span></p>
+    <p style="display:flex;justify-content:space-between">Shipping <span>${shipping ? money(shipping) : "Complimentary"}</span></p>
+    <p style="display:flex;justify-content:space-between;font-weight:700">Total <span>${money(total)}</span></p>
+    <button id="goCheckout" type="button">CONTINUE TO CHECKOUT</button>`;
 }
 
 function renderCheckout() {
+  const summary = $("checkoutSummary");
+  if (!summary) return;
+
   const cart = getCart();
-  let subtotal = 0;
+  const total = cart.reduce((sum, item) => {
+    const product = products.find(product => product.id === item.id);
+    return sum + (product ? product.price * item.qty : 0);
+  }, 0);
 
-  const rows = cart.map(item => {
-    const product = cartItemProduct(item);
-    if (!product) return "";
-
-    const qty = Number(item.qty ?? item.quantity ?? 1);
-    subtotal += Number(product.price || 0) * qty;
-
-    return `
-      <div class="p-total">
-        <span>${escapeHTML(product.name)} × ${qty}</span>
-        <strong>${money(Number(product.price || 0) * qty)}</strong>
-      </div>
-    `;
-  }).join("");
-
-  const shipping = subtotal === 0 || subtotal >= 2500 ? 0 : 199;
-
-  $("checkoutSummary").innerHTML = `
-    ${rows}
-    <div class="p-total"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
-    <div class="p-total"><span>Shipping</span><strong>${shipping ? money(shipping) : "Complimentary"}</strong></div>
-    <div class="p-total"><strong>Total</strong><strong>${money(subtotal + shipping)}</strong></div>
-  `;
+  summary.innerHTML = `
+    <h3>Order summary</h3>
+    ${cart.map(item => {
+      const product = products.find(product => product.id === item.id);
+      if (!product) return "";
+      return `<p>${escapeHTML(product.name)} · ${escapeHTML(item.size)} × ${item.qty}
+        <span style="float:right">${money(product.price * item.qty)}</span></p>`;
+    }).join("")}
+    <hr><p><strong>Total: ${money(total)}</strong></p>`;
 }
 
 function renderRelatedProducts() {
+  const container = $("relatedProducts");
+  if (!container || !currentProduct) return;
+
   const related = products
-    .filter(product => String(product.id) !== String(currentProduct.id))
+    .filter(product => product.id !== currentProduct.id)
     .sort((a, b) => {
-      const sameA = a.category === currentProduct.category ? 1 : 0;
-      const sameB = b.category === currentProduct.category ? 1 : 0;
-      return sameB - sameA;
+      const aMatch = a.category === currentProduct.category ? 1 : 0;
+      const bMatch = b.category === currentProduct.category ? 1 : 0;
+      return bMatch - aMatch;
     })
     .slice(0, 4);
 
-  $("relatedProducts").innerHTML = related.length ? related.map(product => {
-    const image = getImages(product)[0] || "";
-
+  container.innerHTML = related.map(product => {
+    const image = product.images[0] || "";
     return `
-      <a class="p-card" href="/product.html?id=${encodeURIComponent(product.id)}">
-        <img src="${escapeHTML(image)}" alt="${escapeHTML(product.name)}">
-        <h3>${escapeHTML(product.name)}</h3>
-        <p>${money(product.price)}</p>
-      </a>
-    `;
-  }).join("") : `<p class="p-empty">More pieces coming soon.</p>`;
+      <a href="/product.html?id=${encodeURIComponent(product.id)}">
+        ${image ? `<img src="${image}" alt="${escapeHTML(product.name)}">` : `<div style="aspect-ratio:3/4;background:#181818"></div>`}
+        <p>${escapeHTML(product.name)}</p>
+        <small>${money(product.price)}</small>
+      </a>`;
+  }).join("");
 }
 
 function renderSearch(query = "") {
+  const container = $("searchResults");
+  if (!container) return;
+
   const term = query.trim().toLowerCase();
 
   const matches = products.filter(product =>
-    String(product.name || "").toLowerCase().includes(term) ||
-    String(product.category || "").toLowerCase().includes(term) ||
-    String(product.description || "").toLowerCase().includes(term)
+    product.name.toLowerCase().includes(term) ||
+    String(product.category || "").toLowerCase().includes(term)
   ).slice(0, 10);
 
-  $("searchResults").innerHTML = matches.length ? matches.map(product => {
-    const image = getImages(product)[0] || "";
+  if (!matches.length) {
+    container.innerHTML = `<p style="color:#aaa;font-size:12px">No matching products found.</p>`;
+    return;
+  }
 
-    return `
-      <a class="p-search-result" href="/product.html?id=${encodeURIComponent(product.id)}">
-        <img src="${escapeHTML(image)}" alt="">
-        <span>
-          <strong>${escapeHTML(product.name)}</strong>
-          <p>${money(product.price)}</p>
-        </span>
-      </a>
-    `;
-  }).join("") : `<p class="p-empty">No matching products found.</p>`;
+  container.innerHTML = matches.map(product => `
+    <a href="/product.html?id=${encodeURIComponent(product.id)}"
+      style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #333">
+      ${product.images[0] ? `<img src="${product.images[0]}" alt="" style="width:55px;height:70px;object-fit:cover">` : ""}
+      <span>${escapeHTML(product.name)}<br><small>${money(product.price)}</small></span>
+    </a>
+  `).join("");
 }
 
 async function renderAccount() {
-  const body = $("accountBody");
+  const message = $("accountMessage");
+  if (!message) return;
 
   const { data: { session }, error } = await supabase.auth.getSession();
 
   if (error) {
-    body.innerHTML = `<p class="p-note">Unable to load your account. Please try again.</p>`;
+    message.textContent = error.message;
     return;
   }
 
   if (session?.user) {
-    body.innerHTML = `
+    $("accountBody").innerHTML = `
       <p>Signed in as</p>
-      <strong>${escapeHTML(session.user.email)}</strong>
-      <p class="p-note">Your AURENAR account is active.</p>
-      <button class="p-primary" id="signOutBtn">SIGN OUT</button>
-    `;
-
-    $("signOutBtn").addEventListener("click", async () => {
-      const { error: signOutError } = await supabase.auth.signOut();
-      if (signOutError) return toast(signOutError.message);
-      toast("Signed out.");
-      renderAccount();
+      <p>${escapeHTML(session.user.email)}</p>
+      <button class="primary-button" id="logoutBtn">SIGN OUT</button>`;
+    $("logoutBtn")?.addEventListener("click", async () => {
+      const result = await supabase.auth.signOut();
+      if (result.error) toast(result.error.message);
+      else {
+        toast("Signed out");
+        renderAccount();
+      }
     });
+  }
+}
 
+async function login() {
+  const email = $("accountEmail")?.value.trim();
+  const password = $("accountPassword")?.value;
+  const message = $("accountMessage");
+
+  if (!email || !password) {
+    if (message) message.textContent = "Enter your email and password.";
     return;
   }
 
-  body.innerHTML = `
-    <h3 style="font:24px Georgia,serif;font-weight:400">Welcome to AURENAR</h3>
-    <p class="p-note">Sign in or create an account.</p>
-    <form id="accountForm">
-      <input class="p-field" id="accountEmail" type="email" placeholder="Email address" required>
-      <input class="p-field" id="accountPassword" type="password" placeholder="Password" minlength="6" required>
-      <button class="p-primary" type="submit" id="loginSubmit">SIGN IN</button>
-      <button class="p-primary" type="button" id="signupSubmit" style="margin-top:10px;background:transparent;color:#171715;border:1px solid #171715">CREATE ACCOUNT</button>
-    </form>
-    <p class="p-note" id="accountMessage"></p>
-  `;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-  $("accountForm").addEventListener("submit", async event => {
-    event.preventDefault();
+  if (error) {
+    if (message) message.textContent = error.message;
+    return;
+  }
 
-    const email = $("accountEmail").value.trim();
-    const password = $("accountPassword").value;
-    const message = $("accountMessage");
-
-    message.textContent = "Signing in...";
-
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    message.textContent = loginError
-      ? loginError.message
-      : "You are signed in.";
-
-    if (!loginError) renderAccount();
-  });
-
-  $("signupSubmit").addEventListener("click", async () => {
-    const email = $("accountEmail").value.trim();
-    const password = $("accountPassword").value;
-    const message = $("accountMessage");
-
-    if (!email || password.length < 6) {
-      message.textContent = "Enter a valid email and a password of at least 6 characters.";
-      return;
-    }
-
-    message.textContent = "Creating your account...";
-
-    const { data, error: signupError } = await supabase.auth.signUp({
-      email,
-      password
-    });
-
-    if (signupError) {
-      message.textContent = signupError.message;
-      return;
-    }
-
-    message.textContent = data.session
-      ? "Account created. You are signed in."
-      : "Account created. Check your email to confirm your account.";
-
-    if (data.session) renderAccount();
-  });
+  toast("Welcome back");
+  renderAccount();
 }
 
-function showWishlist() {
-  const wishlist = getWishlist();
+async function signup() {
+  const email = $("accountEmail")?.value.trim();
+  const password = $("accountPassword")?.value;
+  const message = $("accountMessage");
 
-  const ids = wishlist.map(item =>
-    String(typeof item === "object" ? item.id : item)
-  );
+  if (!email || !password) {
+    if (message) message.textContent = "Enter your email and password.";
+    return;
+  }
 
-  const saved = products.filter(product => ids.includes(String(product.id)));
+  if (password.length < 6) {
+    if (message) message.textContent = "Password must be at least 6 characters.";
+    return;
+  }
 
-  $("searchInput").value = "";
-  $("searchResults").innerHTML = saved.length ? saved.map(product => {
-    const image = getImages(product)[0] || "";
+  const { data, error } = await supabase.auth.signUp({ email, password });
 
-    return `
-      <a class="p-search-result" href="/product.html?id=${encodeURIComponent(product.id)}">
-        <img src="${escapeHTML(image)}" alt="">
-        <span>
-          <strong>${escapeHTML(product.name)}</strong>
-          <p>${money(product.price)}</p>
-        </span>
-      </a>
-    `;
-  }).join("") : `<p class="p-empty">Your wishlist is empty.</p>`;
+  if (error) {
+    if (message) message.textContent = error.message;
+    return;
+  }
 
-  showDrawer("searchDrawer");
+  if (message) {
+    message.textContent = data.session
+      ? "Your account has been created."
+      : "Check your email to confirm your account.";
+  }
 }
 
 async function loadProducts() {
-  $("productName").textContent = "Loading product...";
-
   const { data, error } = await supabase
     .from("products")
     .select("*")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
 
   if (error) {
     $("productName").textContent = "Unable to load product";
-    $("productDescription").textContent =
-      "Please refresh the page. If the issue continues, check the Supabase products table and permissions.";
-    console.error("AURENAR product loading error:", error);
+    $("productMessage").textContent = error.message;
     return;
   }
 
-  products = data || [];
-
-  const params = new URLSearchParams(location.search);
-  const productId = params.get("id");
-  const productSlug = params.get("slug");
-
-  if (productId) {
-    currentProduct = products.find(product =>
-      String(product.id) === String(productId)
-    );
-  } else if (productSlug) {
-    currentProduct = products.find(product =>
-      String(product.slug) === String(productSlug)
-    );
-  }
-
-  if (!productId && !productSlug) {
-    $("productName").textContent = "Product not selected";
-    $("productDescription").textContent =
-      "Please open a product from the collection to view its details.";
-    $("relatedProducts").innerHTML = "";
-    return;
-  }
+  products = (data || []).map(normalizeProduct);
+  currentProduct = findProductFromURL();
 
   if (!currentProduct) {
     $("productName").textContent = "Product not found";
-    $("productDescription").textContent =
-      "This product may be unavailable or the link may be incorrect.";
-    $("relatedProducts").innerHTML = "";
+    $("productMessage").textContent = "Please return to the collection and choose a product.";
+    $("productDetail").querySelector(".purchase-row")?.remove();
+    $("productDetail").querySelector(".product-accordions")?.remove();
+    $("relatedSection").hidden = true;
     return;
   }
 
+  selectedSize = "";
   renderProduct();
   renderRelatedProducts();
+  renderBag();
+  renderCheckout();
   updateBagCount();
 }
 
 function wireInterface() {
-  $("bagBtn").addEventListener("click", () => {
+  $("bagBtn")?.addEventListener("click", () => {
     renderBag();
-    showDrawer("bagDrawer");
+    openDrawer("bagDrawer");
   });
 
-  $("accountBtn").addEventListener("click", () => {
-    showDrawer("accountDrawer");
+  $("accountBtn")?.addEventListener("click", () => {
     renderAccount();
+    openDrawer("accountDrawer");
   });
 
-  $("searchBtn").addEventListener("click", () => {
-    renderSearch("");
-    showDrawer("searchDrawer");
-    $("searchInput").focus();
+  $("searchBtn")?.addEventListener("click", () => {
+    openDrawer("searchDrawer");
+    renderSearch($("searchInput")?.value || "");
+    $("searchInput")?.focus();
   });
 
-  $("wishlistBtn").addEventListener("click", showWishlist);
-  $("productHeart").addEventListener("click", toggleWishlist);
-  $("addToBagBtn").addEventListener("click", addToBag);
+  $("wishlistBtn")?.addEventListener("click", () => {
+    const wishlist = readStorage(WISH_KEY);
+    const saved = products.filter(product => wishlist.includes(product.id));
 
-  $("sizeOptions").addEventListener("click", event => {
+    $("searchResults").innerHTML = saved.length
+      ? saved.map(product => `
+        <a href="/product.html?id=${encodeURIComponent(product.id)}"
+          style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #333">
+          ${product.images[0] ? `<img src="${product.images[0]}" alt="" style="width:55px;height:70px;object-fit:cover">` : ""}
+          <span>${escapeHTML(product.name)}<br><small>${money(product.price)}</small></span>
+        </a>`).join("")
+      : "<p>Your wishlist is empty.</p>";
+
+    openDrawer("searchDrawer");
+  });
+
+  $("productHeart")?.addEventListener("click", () => {
+    if (currentProduct) toggleWishlist(currentProduct.id);
+  });
+
+  $("addToBagBtn")?.addEventListener("click", addToBag);
+
+  $("sizeOptions")?.addEventListener("click", event => {
     const button = event.target.closest("[data-size]");
     if (!button) return;
-
     selectedSize = button.dataset.size;
     renderSizes();
-    $("productMessage").textContent = "";
   });
 
-  $("galleryThumbs").addEventListener("click", event => {
+  $("galleryThumbs")?.addEventListener("click", event => {
     const button = event.target.closest("[data-image-index]");
     if (!button) return;
-    changeImage(Number(button.dataset.imageIndex));
+    galleryIndex = Number(button.dataset.imageIndex);
+    renderGallery();
   });
 
-  $("prevImage").addEventListener("click", () => changeImage(galleryIndex - 1));
-  $("nextImage").addEventListener("click", () => changeImage(galleryIndex + 1));
+  $("prevImage")?.addEventListener("click", () => changeImage(-1));
+  $("nextImage")?.addEventListener("click", () => changeImage(1));
 
-  $("galleryStage").addEventListener("touchstart", event => {
-    touchStartX = event.changedTouches[0].screenX;
+  let touchStartX = 0;
+  $("galleryStage")?.addEventListener("touchstart", event => {
+    touchStartX = event.changedTouches[0].clientX;
   }, { passive: true });
 
-  $("galleryStage").addEventListener("touchend", event => {
-    const difference = event.changedTouches[0].screenX - touchStartX;
-
-    if (Math.abs(difference) > 45) {
-      changeImage(galleryIndex + (difference < 0 ? 1 : -1));
-    }
+  $("galleryStage")?.addEventListener("touchend", event => {
+    const difference = event.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(difference) > 45) changeImage(difference < 0 ? 1 : -1);
   }, { passive: true });
 
-  $("overlay").addEventListener("click", closeDrawers);
+  $("sizeGuideBtn")?.addEventListener("click", openSizeGuide);
+  $("closeSizeGuide")?.addEventListener("click", closeSizeGuide);
+
+  $("sizeModal")?.addEventListener("click", event => {
+    if (event.target.id === "sizeModal") closeSizeGuide();
+  });
+
+  $("overlay")?.addEventListener("click", closeDrawers);
 
   document.querySelectorAll("[data-close]").forEach(button => {
     button.addEventListener("click", closeDrawers);
   });
 
-  document.addEventListener("keydown", event => {
-    if (event.key === "Escape") {
-      closeDrawers();
-      $("sizeModal").classList.remove("open");
-    }
+  $("menuBtn")?.addEventListener("click", () => {
+    $("mobileNav")?.classList.toggle("open");
   });
 
-  $("bagBody").addEventListener("click", event => {
-    const quantityButton = event.target.closest("[data-qty-index]");
-    const removeButton = event.target.closest("[data-remove-index]");
-
-    if (quantityButton) {
-      updateCartQuantity(
-        Number(quantityButton.dataset.qtyIndex),
-        Number(quantityButton.dataset.change)
-      );
-    }
-
-    if (removeButton) {
-      removeCartItem(Number(removeButton.dataset.removeIndex));
-    }
-  });
-
-  $("bagFoot").addEventListener("click", event => {
-    if (event.target.id !== "openCheckoutBtn") return;
-
-    if (!getCart().length) {
-      toast("Your bag is empty.");
-      return;
-    }
-
-    renderCheckout();
-    showDrawer("checkoutDrawer");
-  });
-
-  $("searchInput").addEventListener("input", event => {
+  $("searchInput")?.addEventListener("input", event => {
     renderSearch(event.target.value);
   });
 
-  $("sizeGuideBtn").addEventListener("click", () => {
-    $("sizeModal").classList.add("open");
-  });
+  $("bagBody")?.addEventListener("click", event => {
+    const quantityButton = event.target.closest("[data-qty]");
+    if (quantityButton) {
+      changeCartQuantity(
+        quantityButton.dataset.id,
+        quantityButton.dataset.size,
+        Number(quantityButton.dataset.qty)
+      );
+      return;
+    }
 
-  $("closeSizeGuide").addEventListener("click", () => {
-    $("sizeModal").classList.remove("open");
-  });
-
-  $("sizeModal").addEventListener("click", event => {
-    if (event.target.id === "sizeModal") {
-      $("sizeModal").classList.remove("open");
+    const removeButton = event.target.closest("[data-remove-id]");
+    if (removeButton) {
+      removeCartItem(removeButton.dataset.removeId, removeButton.dataset.removeSize);
     }
   });
 
-  $("paymentNoticeBtn").addEventListener("click", () => {
-    toast("Online payment is not connected yet.");
+  $("bagFoot")?.addEventListener("click", event => {
+    if (event.target.id !== "goCheckout") return;
+    renderCheckout();
+    openDrawer("checkoutDrawer");
   });
 
-  $("menuBtn").addEventListener("click", () => {
-    showDrawer("searchDrawer");
-    $("searchResults").innerHTML = `
-      <a class="p-search-result" href="/men.html"><strong>MEN</strong></a>
-      <a class="p-search-result" href="/women.html"><strong>WOMEN</strong></a>
-      <a class="p-search-result" href="/search.html"><strong>DISCOVER</strong></a>
-    `;
+  $("loginBtn")?.addEventListener("click", login);
+  $("signupBtn")?.addEventListener("click", signup);
+
+  supabase.auth.onAuthStateChange(() => {
+    if ($("accountDrawer")?.classList.contains("open")) renderAccount();
   });
 }
 
 wireInterface();
-loadProducts();
 updateBagCount();
+loadProducts();
