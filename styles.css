@@ -1475,3 +1475,85 @@ button:disabled {
     padding: 17px;
   }
 }
+/* AURENAR — FIX PRODUCT PAGE DRAWERS */
+
+#bagDrawer,
+#accountDrawer,
+#searchDrawer,
+#checkoutDrawer {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: auto !important;
+
+  width: min(460px, 100%) !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  background: #f8f7f3 !important;
+  color: #191919 !important;
+
+  z-index: 1001 !important;
+
+  overflow-y: auto !important;
+
+  transform: translateX(105%) !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+
+  transition:
+    transform .3s ease,
+    opacity .3s ease,
+    visibility .3s ease !important;
+}
+
+#bagDrawer.open,
+#accountDrawer.open,
+#searchDrawer.open,
+#checkoutDrawer.open {
+  transform: translateX(0) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000 !important;
+
+  background: rgba(0, 0, 0, .42) !important;
+
+  opacity: 0 !important;
+  visibility: hidden !important;
+
+  transition: .3s ease !important;
+}
+
+#overlay.open {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+body.drawer-open {
+  overflow: hidden !important;
+}
+
+#bagDrawer *,
+#accountDrawer *,
+#searchDrawer *,
+#checkoutDrawer * {
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  #bagDrawer,
+  #accountDrawer,
+  #searchDrawer,
+  #checkoutDrawer {
+    width: 100% !important;
+  }
+}
