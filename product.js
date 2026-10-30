@@ -1,697 +1,735 @@
+import { supabase } from "./supabase-client.js";
 
-import { supabase } from './supabase-client.js';
-
-const $ = (selector, root = document) => root.querySelector(selector);
-const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-
-const CART_KEY = 'aurenar_cart';
-const WISH_KEY = 'aurenar_wishlist';
-
-const FALLBACK = [
-  {
-    id: 'fallback-1',
-    name: 'White Linen Shirt',
-    price: 1499,
-    image_url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=1400&q=84',
-    sizes: ['S', 'M', 'L', 'XL'],
-    description: 'A clean linen essential with a relaxed, considered silhouette.',
-    is_active: true
-  },
-  {
-    id: 'fallback-2',
-    name: 'Noir Overshirt',
-    price: 1899,
-    image_url: 'https://images.unsplash.com/photo-1598808503746-f34c53b9323e?auto=format&fit=crop&w=1400&q=84',
-    sizes: ['S', 'M', 'L', 'XL'],
-    description: 'A structured everyday layer in a deep, understated tone.',
-    is_active: true
-  },
-  {
-    id: 'fallback-3',
-    name: 'Stone Trousers',
-    price: 1799,
-    image_url: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=1400&q=84',
-    sizes: ['30', '32', '34', '36'],
-    description: 'Relaxed tailored trousers designed for an effortless line.',
-    is_active: true
-  }
-];
+const CART_KEY = "aurenar_cart";
+const WISH_KEY = "aurenar_wishlist";
 
 let products = [];
-let selectedProduct = null;
-let selectedSize = '';
+let currentProduct = null;
+let selectedSize = "";
+let galleryImages = [];
+let galleryIndex = 0;
+let touchStartX = 0;
 
-function readStorage(key) {
+const $ = (id) => document.getElementById(id);
+
+function readStorage(key, fallback = []) {
   try {
-    const value = JSON.parse(localStorage.getItem(key) || '[]');
-    return Array.isArray(value) ? value : [];
+    const value = JSON.parse(localStorage.getItem(key) || "null");
+    return Array.isArray(value) ? value : fallback;
   } catch {
-    return [];
+    return fallback;
   }
 }
 
-function writeStorage(key, value) {
+function saveStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-function money(value) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0
-  }).format(Number(value) || 0);
-}
-
-function safe(value) {
-  return String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
+function escapeHTML(value = "") {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
   })[char]);
 }
 
-function imageOf(product) {
-  if (Array.isArray(product.images) && product.images.length) {
-    return product.images[0];
-  }
-
-  if (typeof product.images === 'string' && product.images.trim()) {
-    try {
-      const parsed = JSON.parse(product.images);
-      if (Array.isArray(parsed) && parsed[0]) return parsed[0];
-    } catch {
-      return product.images;
-    }
-  }
-
-  return product.image_url ||
-    'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1400&q=84';
-}
-
-function normalize(product) {
-  return {
-    ...product,
-    images: Array.isArray(product.images)
-      ? product.images
-      : [product.image_url].filter(Boolean),
-    sizes: Array.isArray(product.sizes)
-      ? product.sizes
-      : typeof product.sizes === 'string'
-        ? product.sizes.split(',').map(size => size.trim()).filter(Boolean)
-        : ['S', 'M', 'L', 'XL']
-  };
+function money(value) {
+  return "₹" + Number(value || 0).toLocaleString("en-IN");
 }
 
 function toast(message) {
-  const element = $('#toast');
+  const element = $("toast");
   if (!element) return;
-
   element.textContent = message;
-  element.classList.add('show');
-
-  clearTimeout(window.__aurenarToastTimer);
-  window.__aurenarToastTimer = setTimeout(() => {
-    element.classList.remove('show');
-  }, 2300);
+  element.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => element.classList.remove("show"), 2400);
 }
 
-function openDrawer(id) {
-  const drawer = $('#' + id);
-  const overlay = $('#overlay');
+function getImages(product) {
+  let images = [];
 
-  if (!drawer) return;
-
-  drawer.classList.add('open');
-  drawer.setAttribute('aria-hidden', 'false');
-
-  if (overlay) {
-    overlay.hidden = false;
-    overlay.classList.add('open');
-  }
-}
-
-function closeDrawer(id) {
-  const drawer = $('#' + id);
-  if (!drawer) return;
-
-  drawer.classList.remove('open');
-  drawer.setAttribute('aria-hidden', 'true');
-
-  if (!$$('.drawer.open').length) {
-    const overlay = $('#overlay');
-    if (overlay) {
-      overlay.hidden = true;
-      overlay.classList.remove('open');
+  if (Array.isArray(product.images)) {
+    images = product.images;
+  } else if (typeof product.images === "string") {
+    try {
+      const parsed = JSON.parse(product.images);
+      if (Array.isArray(parsed)) images = parsed;
+    } catch {
+      images = product.images.split(",").map(item => item.trim());
     }
   }
+
+  if (product.image_url) images.unshift(product.image_url);
+
+  return [...new Set(images.filter(url =>
+    typeof url === "string" && /^https?:\/\//i.test(url)
+  ))];
 }
 
-function closeAllDrawers() {
-  $$('.drawer.open').forEach(drawer => closeDrawer(drawer.id));
+function getSizes(product) {
+  let sizes = product.sizes || [];
+
+  if (typeof sizes === "string") {
+    try {
+      sizes = JSON.parse(sizes);
+    } catch {
+      sizes = sizes.split(",").map(size => size.trim());
+    }
+  }
+
+  if (!Array.isArray(sizes)) sizes = [];
+  return sizes.map(size => String(size).trim()).filter(Boolean);
+}
+
+function getCart() {
+  return readStorage(CART_KEY);
+}
+
+function saveCart(cart) {
+  saveStorage(CART_KEY, cart);
+  updateBagCount();
+}
+
+function getWishlist() {
+  return readStorage(WISH_KEY);
+}
+
+function saveWishlist(items) {
+  saveStorage(WISH_KEY, items);
+  updateWishlistButton();
 }
 
 function updateBagCount() {
-  const count = readStorage(CART_KEY)
-    .reduce((total, item) => total + (Number(item.qty) || 0), 0);
+  const count = getCart().reduce((total, item) => {
+    return total + Number(item.qty ?? item.quantity ?? 1);
+  }, 0);
 
-  $$('#bagCount').forEach(element => {
-    element.textContent = count;
-  });
-}
-
-function wishlistIds() {
-  return readStorage(WISH_KEY).map(String);
-}
-
-function toggleWishlist(product) {
-  const current = wishlistIds();
-  const id = String(product.id);
-  const exists = current.includes(id);
-
-  const next = exists
-    ? current.filter(item => item !== id)
-    : [...current, id];
-
-  writeStorage(WISH_KEY, next);
-  updateWishlistButton();
-  renderProduct();
-
-  toast(exists ? 'Removed from wishlist' : 'Added to wishlist');
+  if ($("bagCount")) $("bagCount").textContent = count;
 }
 
 function updateWishlistButton() {
-  const button = $('#wishlistBtn');
-  if (!button) return;
+  const button = $("productHeart");
+  if (!button || !currentProduct) return;
 
-  const saved = wishlistIds();
-  button.setAttribute(
-    'aria-label',
-    `Wishlist, ${saved.length} saved item${saved.length === 1 ? '' : 's'}`
+  const saved = getWishlist().some(item =>
+    String(typeof item === "object" ? item.id : item) === String(currentProduct.id)
   );
-  button.classList.toggle('is-active', saved.length > 0);
+
+  button.classList.toggle("active", saved);
+  button.textContent = saved ? "♥" : "♡";
 }
 
-function renderProduct() {
-  const root = $('#productDetail');
-  if (!root || !selectedProduct) return;
-
-  const product = selectedProduct;
-  const images = product.images.length
-    ? product.images
-    : [imageOf(product)];
-
-  const saved = wishlistIds().includes(String(product.id));
-  const hasStockColumn = product.stock !== undefined && product.stock !== null;
-  const soldOut = hasStockColumn && Number(product.stock) <= 0;
-
-  document.title = `${product.name} — AURENAR`;
-
-  root.innerHTML = `
-    <div class="detail-gallery">
-      ${images.map((url, index) => `
-        <div class="detail-image">
-          <img
-            src="${safe(url)}"
-            alt="${safe(product.name)}${index ? ' alternate view' : ''}"
-            loading="${index ? 'lazy' : 'eager'}"
-          >
-        </div>
-      `).join('')}
-    </div>
-
-    <div class="detail-info">
-      <p class="eyebrow">
-        AURENAR / ${soldOut ? 'SOLD OUT' : 'MODERN ESSENTIALS'}
-      </p>
-
-      <h1>${safe(product.name)}</h1>
-
-      <div class="detail-price">
-        ${money(product.price)}
-        ${product.compare_at_price
-          ? `<del>${money(product.compare_at_price)}</del>`
-          : ''}
-      </div>
-
-      <p class="detail-desc">
-        ${safe(product.description || 'A considered AURENAR essential.')}
-      </p>
-
-      ${product.sizes.length ? `
-        <div class="detail-field">
-          <div class="field-label">
-            <span>SELECT SIZE</span>
-            <button type="button" id="sizeGuide">SIZE GUIDE</button>
-          </div>
-
-          <div class="size-grid" id="sizes">
-            ${product.sizes.map(size => `
-              <button
-                type="button"
-                class="size-option"
-                data-size="${safe(size)}"
-              >${safe(size)}</button>
-            `).join('')}
-          </div>
-        </div>
-      ` : ''}
-
-      <div class="detail-actions">
-        <button
-          type="button"
-          class="primary-btn"
-          id="addBtn"
-          ${soldOut ? 'disabled' : ''}
-        >
-          ${soldOut ? 'SOLD OUT' : 'ADD TO BAG'}
-        </button>
-
-        <button
-          type="button"
-          class="wishlist-large"
-          id="wishBtn"
-          aria-pressed="${saved}"
-        >
-          ${saved ? '♥' : '♡'}
-          <span>${saved ? 'WISHLISTED' : 'WISHLIST'}</span>
-        </button>
-      </div>
-
-      <div class="product-notes">
-        <div>
-          <strong>COLLECTION</strong>
-          <span>${safe(product.category || 'Modern essentials')}</span>
-        </div>
-        <div>
-          <strong>DELIVERY</strong>
-          <span>Complimentary over ₹2,500</span>
-        </div>
-        <div>
-          <strong>DETAIL</strong>
-          <span>Designed with everyday versatility in mind.</span>
-        </div>
-      </div>
-    </div>
-  `;
-
-  selectedSize = '';
-
-  $$('.size-option', root).forEach(button => {
-    button.addEventListener('click', () => {
-      $$('.size-option', root).forEach(item => {
-        item.classList.remove('selected');
-      });
-
-      button.classList.add('selected');
-      selectedSize = button.dataset.size;
-    });
-  });
-
-  $('#addBtn', root)?.addEventListener('click', addSelectedProduct);
-  $('#wishBtn', root)?.addEventListener('click', () => {
-    toggleWishlist(product);
-  });
-
-  $('#sizeGuide', root)?.addEventListener('click', () => {
-    toast('Please check the product size before ordering.');
-  });
+function showDrawer(id) {
+  closeDrawers();
+  const drawer = $(id);
+  if (!drawer) return;
+  drawer.classList.add("open");
+  $("overlay")?.classList.add("open");
+  document.body.style.overflow = "hidden";
 }
 
-function addSelectedProduct() {
-  const product = selectedProduct;
-  if (!product) return;
+function closeDrawers() {
+  document.querySelectorAll(".p-drawer").forEach(drawer => {
+    drawer.classList.remove("open");
+  });
 
-  if (product.sizes.length && !selectedSize) {
-    toast('Please select a size first');
+  $("overlay")?.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+function renderGallery() {
+  const mainImage = $("mainImage");
+  const thumbs = $("galleryThumbs");
+
+  if (!galleryImages.length) {
+    mainImage.src = "";
+    mainImage.alt = "Image unavailable";
+    thumbs.innerHTML = "";
     return;
   }
 
-  const cart = readStorage(CART_KEY);
-  const key = `${product.id}::${selectedSize}`;
-  const existing = cart.find(item => item.key === key);
+  galleryIndex = Math.max(0, Math.min(galleryIndex, galleryImages.length - 1));
+  mainImage.src = galleryImages[galleryIndex];
+  mainImage.alt = currentProduct?.name || "AURENAR product";
+
+  thumbs.innerHTML = galleryImages.map((image, index) => `
+    <button class="p-thumb ${index === galleryIndex ? "active" : ""}" data-image-index="${index}" aria-label="View image ${index + 1}">
+      <img src="${escapeHTML(image)}" alt="">
+    </button>
+  `).join("");
+
+  $("prevImage").style.display = galleryImages.length > 1 ? "" : "none";
+  $("nextImage").style.display = galleryImages.length > 1 ? "" : "none";
+}
+
+function changeImage(index) {
+  if (!galleryImages.length) return;
+  galleryIndex = (index + galleryImages.length) % galleryImages.length;
+  renderGallery();
+}
+
+function renderSizes() {
+  const container = $("sizeOptions");
+  const sizes = getSizes(currentProduct);
+
+  if (!sizes.length) {
+    selectedSize = "";
+    container.innerHTML = `<p class="p-note">Size selection is not available for this product.</p>`;
+    return;
+  }
+
+  if (!sizes.includes(selectedSize)) selectedSize = "";
+
+  container.innerHTML = sizes.map(size => `
+    <button class="p-size ${selectedSize === size ? "selected" : ""}" data-size="${escapeHTML(size)}">
+      ${escapeHTML(size)}
+    </button>
+  `).join("");
+}
+
+function renderProduct() {
+  if (!currentProduct) return;
+
+  $("productName").textContent = currentProduct.name || "AURENAR Product";
+  $("productPrice").textContent = money(currentProduct.price);
+  $("productColour").textContent = currentProduct.color || currentProduct.colour || "As shown";
+  $("productDescription").textContent =
+    currentProduct.description || "A considered essential from the AURENAR collection.";
+  $("productDetailsText").textContent =
+    currentProduct.details || "Designed with attention to fabric, fit and finish.";
+  $("breadcrumbName").textContent = currentProduct.name || "PRODUCT";
+  document.title = `${currentProduct.name || "Product"} | AURENAR`;
+
+  galleryImages = getImages(currentProduct);
+  galleryIndex = 0;
+  renderGallery();
+  renderSizes();
+  updateWishlistButton();
+}
+
+function addToBag() {
+  if (!currentProduct) return;
+
+  const sizes = getSizes(currentProduct);
+  if (sizes.length && !selectedSize) {
+    $("productMessage").textContent = "Please select a size first.";
+    toast("Please select a size.");
+    return;
+  }
+
+  const cart = getCart();
+  const existing = cart.find(item =>
+    String(item.id) === String(currentProduct.id) &&
+    String(item.size || "") === selectedSize
+  );
 
   if (existing) {
-    existing.qty = (Number(existing.qty) || 0) + 1;
+    existing.qty = Number(existing.qty ?? existing.quantity ?? 1) + 1;
+    delete existing.quantity;
   } else {
     cart.push({
-      key,
-      id: product.id,
+      id: currentProduct.id,
       size: selectedSize,
       qty: 1
     });
   }
 
-  writeStorage(CART_KEY, cart);
-  updateBagCount();
-  renderBag();
-  toast('Added to bag');
-  openDrawer('bagDrawer');
+  saveCart(cart);
+  $("productMessage").textContent = "Added to your bag.";
+  toast("Added to your bag.");
+}
+
+function toggleWishlist() {
+  if (!currentProduct) return;
+
+  let wishlist = getWishlist();
+  const id = String(currentProduct.id);
+
+  const exists = wishlist.some(item =>
+    String(typeof item === "object" ? item.id : item) === id
+  );
+
+  if (exists) {
+    wishlist = wishlist.filter(item =>
+      String(typeof item === "object" ? item.id : item) !== id
+    );
+    toast("Removed from wishlist.");
+  } else {
+    wishlist.push(id);
+    toast("Added to wishlist.");
+  }
+
+  saveWishlist(wishlist);
+}
+
+function findProduct(id) {
+  return products.find(product => String(product.id) === String(id));
+}
+
+function cartItemProduct(item) {
+  return findProduct(item.id);
 }
 
 function renderBag() {
-  const body = $('#bagBody');
-  const footer = $('#bagFoot');
-  if (!body || !footer) return;
-
-  const cart = readStorage(CART_KEY);
+  const cart = getCart();
+  const body = $("bagBody");
+  const foot = $("bagFoot");
 
   if (!cart.length) {
-    body.innerHTML = '<div class="empty-state">Your bag is empty.</div>';
-    footer.innerHTML = '';
+    body.innerHTML = `<p class="p-empty">Your bag is currently empty.</p>`;
+    foot.innerHTML = `<button onclick="location.href='/search.html'">DISCOVER THE COLLECTION</button>`;
     return;
   }
 
   let subtotal = 0;
 
-  body.innerHTML = cart.map(item => {
-    const product = products.find(
-      candidate => String(candidate.id) === String(item.id)
-    );
+  body.innerHTML = cart.map((item, index) => {
+    const product = cartItemProduct(item);
+    if (!product) {
+      return `
+        <div class="p-cart-row">
+          <div></div>
+          <div>
+            <h3>Product unavailable</h3>
+            <p>This item is no longer available.</p>
+            <button class="p-remove" data-remove-index="${index}">REMOVE</button>
+          </div>
+        </div>
+      `;
+    }
 
-    if (!product) return '';
-
-    subtotal += Number(product.price) * Number(item.qty);
+    const qty = Number(item.qty ?? item.quantity ?? 1);
+    subtotal += Number(product.price || 0) * qty;
+    const image = getImages(product)[0] || "";
 
     return `
-      <div class="bag-item">
-        <img src="${safe(imageOf(product))}" alt="${safe(product.name)}">
-
-        <div class="bag-item-main">
-          <strong>${safe(product.name)}</strong>
-          <span>
-            ${item.size ? `Size ${safe(item.size)} · ` : ''}
-            ${money(product.price)}
-          </span>
-
-          <div class="qty">
-            <button type="button" data-k="${safe(item.key)}" data-d="-1">−</button>
-            <span>${Number(item.qty) || 1}</span>
-            <button type="button" data-k="${safe(item.key)}" data-d="1">+</button>
+      <div class="p-cart-row">
+        <img src="${escapeHTML(image)}" alt="${escapeHTML(product.name)}">
+        <div>
+          <h3>${escapeHTML(product.name)}</h3>
+          <p>${money(product.price)}</p>
+          <p>Size: ${escapeHTML(item.size || "One size")}</p>
+          <div class="p-qty">
+            <button data-qty-index="${index}" data-change="-1">−</button>
+            <span>${qty}</span>
+            <button data-qty-index="${index}" data-change="1">+</button>
+            <button class="p-remove" data-remove-index="${index}">REMOVE</button>
           </div>
         </div>
       </div>
     `;
-  }).join('');
+  }).join("");
 
-  $$('[data-k]', body).forEach(button => {
-    button.addEventListener('click', () => {
-      const updated = readStorage(CART_KEY);
-      const item = updated.find(entry => entry.key === button.dataset.k);
-      if (!item) return;
+  const shipping = subtotal === 0 || subtotal >= 2500 ? 0 : 199;
+  const total = subtotal + shipping;
 
-      item.qty = (Number(item.qty) || 1) + Number(button.dataset.d);
-
-      const finalCart = updated.filter(entry => entry.qty > 0);
-      writeStorage(CART_KEY, finalCart);
-
-      updateBagCount();
-      renderBag();
-    });
-  });
-
-  const shipping = subtotal >= 2500 ? 0 : 199;
-
-  footer.innerHTML = `
-    <div class="totals">
-      <span>SUBTOTAL</span>
-      <strong>${money(subtotal)}</strong>
-    </div>
-
-    <div class="totals">
-      <span>SHIPPING</span>
-      <strong>${shipping ? money(shipping) : 'COMPLIMENTARY'}</strong>
-    </div>
-
-    <button type="button" class="primary-btn" id="checkoutBtn">
-      PROCEED TO CHECKOUT
-    </button>
+  foot.innerHTML = `
+    <div class="p-total"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+    <div class="p-total"><span>Shipping</span><strong>${shipping ? money(shipping) : "Complimentary"}</strong></div>
+    <div class="p-total"><strong>Total</strong><strong>${money(total)}</strong></div>
+    <p class="p-note">Shipping is complimentary on orders over ₹2,500.</p>
+    <button id="openCheckoutBtn">CONTINUE TO CHECKOUT</button>
   `;
+}
 
-  $('#checkoutBtn')?.addEventListener('click', () => {
-    renderCheckout();
-    openDrawer('checkoutDrawer');
-  });
+function updateCartQuantity(index, change) {
+  const cart = getCart();
+  if (!cart[index]) return;
+
+  const qty = Number(cart[index].qty ?? cart[index].quantity ?? 1) + change;
+
+  if (qty <= 0) {
+    cart.splice(index, 1);
+  } else {
+    cart[index].qty = qty;
+    delete cart[index].quantity;
+  }
+
+  saveCart(cart);
+  renderBag();
+}
+
+function removeCartItem(index) {
+  const cart = getCart();
+  cart.splice(index, 1);
+  saveCart(cart);
+  renderBag();
 }
 
 function renderCheckout() {
-  const summary = $('#checkoutSummary');
-  if (!summary) return;
+  const cart = getCart();
+  let subtotal = 0;
 
-  const cart = readStorage(CART_KEY);
-  const subtotal = cart.reduce((total, item) => {
-    const product = products.find(
-      candidate => String(candidate.id) === String(item.id)
-    );
+  const rows = cart.map(item => {
+    const product = cartItemProduct(item);
+    if (!product) return "";
 
-    return total + (Number(product?.price) || 0) * (Number(item.qty) || 0);
-  }, 0);
+    const qty = Number(item.qty ?? item.quantity ?? 1);
+    subtotal += Number(product.price || 0) * qty;
 
-  const shipping = subtotal >= 2500 ? 0 : 199;
+    return `
+      <div class="p-total">
+        <span>${escapeHTML(product.name)} × ${qty}</span>
+        <strong>${money(Number(product.price || 0) * qty)}</strong>
+      </div>
+    `;
+  }).join("");
 
-  summary.innerHTML = `
-    <div><span>SUBTOTAL</span><strong>${money(subtotal)}</strong></div>
-    <div>
-      <span>SHIPPING</span>
-      <strong>${shipping ? money(shipping) : 'COMPLIMENTARY'}</strong>
-    </div>
-    <div class="summary-total">
-      <span>TOTAL</span>
-      <strong>${money(subtotal + shipping)}</strong>
-    </div>
+  const shipping = subtotal === 0 || subtotal >= 2500 ? 0 : 199;
+
+  $("checkoutSummary").innerHTML = `
+    ${rows}
+    <div class="p-total"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+    <div class="p-total"><span>Shipping</span><strong>${shipping ? money(shipping) : "Complimentary"}</strong></div>
+    <div class="p-total"><strong>Total</strong><strong>${money(subtotal + shipping)}</strong></div>
   `;
 }
 
-function showWishlist() {
-  const results = $('#searchResults');
-  const input = $('#searchInput');
-  if (!results) return;
+function renderRelatedProducts() {
+  const related = products
+    .filter(product => String(product.id) !== String(currentProduct.id))
+    .sort((a, b) => {
+      const sameA = a.category === currentProduct.category ? 1 : 0;
+      const sameB = b.category === currentProduct.category ? 1 : 0;
+      return sameB - sameA;
+    })
+    .slice(0, 4);
 
-  if (input) input.value = '';
+  $("relatedProducts").innerHTML = related.length ? related.map(product => {
+    const image = getImages(product)[0] || "";
 
-  const saved = wishlistIds();
-  const items = products.filter(product => saved.includes(String(product.id)));
-
-  results.innerHTML = items.length
-    ? `<p class="eyebrow">YOUR WISHLIST</p>` + items.map(product => `
-        <a class="search-result" href="/product.html?id=${encodeURIComponent(product.id)}">
-          <img src="${safe(imageOf(product))}" alt="">
-          <span>${safe(product.name)} · ${money(product.price)}</span>
-        </a>
-      `).join('')
-    : '<p class="empty-state">Your wishlist is empty.</p>';
-
-  openDrawer('searchDrawer');
+    return `
+      <a class="p-card" href="/product.html?id=${encodeURIComponent(product.id)}">
+        <img src="${escapeHTML(image)}" alt="${escapeHTML(product.name)}">
+        <h3>${escapeHTML(product.name)}</h3>
+        <p>${money(product.price)}</p>
+      </a>
+    `;
+  }).join("") : `<p class="p-empty">More pieces coming soon.</p>`;
 }
 
-function renderSearch(query) {
-  const results = $('#searchResults');
-  if (!results) return;
-
+function renderSearch(query = "") {
   const term = query.trim().toLowerCase();
 
-  if (!term) {
-    results.innerHTML = '<p class="empty-state">Search the collection.</p>';
-    return;
-  }
-
   const matches = products.filter(product =>
-    `${product.name} ${product.category || ''} ${product.description || ''}`
-      .toLowerCase()
-      .includes(term)
-  );
+    String(product.name || "").toLowerCase().includes(term) ||
+    String(product.category || "").toLowerCase().includes(term) ||
+    String(product.description || "").toLowerCase().includes(term)
+  ).slice(0, 10);
 
-  results.innerHTML = matches.length
-    ? matches.map(product => `
-        <a class="search-result" href="/product.html?id=${encodeURIComponent(product.id)}">
-          <img src="${safe(imageOf(product))}" alt="">
-          <span>${safe(product.name)} · ${money(product.price)}</span>
-        </a>
-      `).join('')
-    : '<p class="empty-state">No matching products found.</p>';
+  $("searchResults").innerHTML = matches.length ? matches.map(product => {
+    const image = getImages(product)[0] || "";
+
+    return `
+      <a class="p-search-result" href="/product.html?id=${encodeURIComponent(product.id)}">
+        <img src="${escapeHTML(image)}" alt="">
+        <span>
+          <strong>${escapeHTML(product.name)}</strong>
+          <p>${money(product.price)}</p>
+        </span>
+      </a>
+    `;
+  }).join("") : `<p class="p-empty">No matching products found.</p>`;
 }
 
 async function renderAccount() {
-  const body = $('#accountBody');
-  if (!body) return;
+  const body = $("accountBody");
 
-  body.innerHTML = '<p class="empty-state">Loading account…</p>';
-
-  const { data, error } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
 
   if (error) {
-    body.innerHTML = '<p>Account could not be loaded. Please try again.</p>';
+    body.innerHTML = `<p class="p-note">Unable to load your account. Please try again.</p>`;
     return;
   }
 
-  if (data.session) {
+  if (session?.user) {
     body.innerHTML = `
-      <p class="eyebrow">SIGNED IN</p>
-      <h2>${safe(data.session.user.email)}</h2>
-      <button type="button" class="secondary-btn" id="signOut">SIGN OUT</button>
+      <p>Signed in as</p>
+      <strong>${escapeHTML(session.user.email)}</strong>
+      <p class="p-note">Your AURENAR account is active.</p>
+      <button class="p-primary" id="signOutBtn">SIGN OUT</button>
     `;
 
-    $('#signOut')?.addEventListener('click', async () => {
+    $("signOutBtn").addEventListener("click", async () => {
       const { error: signOutError } = await supabase.auth.signOut();
-
-      if (signOutError) {
-        toast('Could not sign out. Try again.');
-        return;
-      }
-
+      if (signOutError) return toast(signOutError.message);
+      toast("Signed out.");
       renderAccount();
-      toast('Signed out');
     });
 
     return;
   }
 
   body.innerHTML = `
-    <p class="eyebrow">YOUR AURENAR ACCOUNT</p>
-    <form id="accountForm" class="auth-form">
-      <input required type="email" name="email" placeholder="Email address">
-      <input required minlength="6" type="password" name="password" placeholder="Password">
-      <button type="submit" class="primary-btn">SIGN IN</button>
-      <button type="button" class="secondary-btn" id="signupBtn">CREATE ACCOUNT</button>
-      <p id="accountMessage" class="form-message"></p>
+    <h3 style="font:24px Georgia,serif;font-weight:400">Welcome to AURENAR</h3>
+    <p class="p-note">Sign in or create an account.</p>
+    <form id="accountForm">
+      <input class="p-field" id="accountEmail" type="email" placeholder="Email address" required>
+      <input class="p-field" id="accountPassword" type="password" placeholder="Password" minlength="6" required>
+      <button class="p-primary" type="submit" id="loginSubmit">SIGN IN</button>
+      <button class="p-primary" type="button" id="signupSubmit" style="margin-top:10px;background:transparent;color:#171715;border:1px solid #171715">CREATE ACCOUNT</button>
     </form>
+    <p class="p-note" id="accountMessage"></p>
   `;
 
-  $('#accountForm')?.addEventListener('submit', async event => {
+  $("accountForm").addEventListener("submit", async event => {
     event.preventDefault();
 
-    const form = new FormData(event.currentTarget);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: form.get('email'),
-      password: form.get('password')
+    const email = $("accountEmail").value.trim();
+    const password = $("accountPassword").value;
+    const message = $("accountMessage");
+
+    message.textContent = "Signing in...";
+
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password
     });
 
-    const message = $('#accountMessage');
+    message.textContent = loginError
+      ? loginError.message
+      : "You are signed in.";
 
-    if (message) {
-      message.textContent = signInError
-        ? signInError.message
-        : 'Signed in successfully.';
-    }
-
-    if (!signInError) renderAccount();
+    if (!loginError) renderAccount();
   });
 
-  $('#signupBtn')?.addEventListener('click', async () => {
-    const form = new FormData($('#accountForm'));
+  $("signupSubmit").addEventListener("click", async () => {
+    const email = $("accountEmail").value.trim();
+    const password = $("accountPassword").value;
+    const message = $("accountMessage");
 
-    const { error: signupError } = await supabase.auth.signUp({
-      email: form.get('email'),
-      password: form.get('password')
+    if (!email || password.length < 6) {
+      message.textContent = "Enter a valid email and a password of at least 6 characters.";
+      return;
+    }
+
+    message.textContent = "Creating your account...";
+
+    const { data, error: signupError } = await supabase.auth.signUp({
+      email,
+      password
     });
 
-    const message = $('#accountMessage');
-
-    if (message) {
-      message.textContent = signupError
-        ? signupError.message
-        : 'Account request submitted. Check your email if confirmation is enabled.';
+    if (signupError) {
+      message.textContent = signupError.message;
+      return;
     }
+
+    message.textContent = data.session
+      ? "Account created. You are signed in."
+      : "Account created. Check your email to confirm your account.";
+
+    if (data.session) renderAccount();
   });
 }
 
-function wireInterface() {
-  updateBagCount();
-  updateWishlistButton();
-  renderBag();
+function showWishlist() {
+  const wishlist = getWishlist();
 
-  $('#bagBtn')?.addEventListener('click', () => {
-    renderBag();
-    openDrawer('bagDrawer');
-  });
+  const ids = wishlist.map(item =>
+    String(typeof item === "object" ? item.id : item)
+  );
 
-  $('#accountBtn')?.addEventListener('click', () => {
-    openDrawer('accountDrawer');
-    renderAccount();
-  });
+  const saved = products.filter(product => ids.includes(String(product.id)));
 
-  $('#searchBtn')?.addEventListener('click', () => {
-    openDrawer('searchDrawer');
-    $('#searchInput')?.focus();
-    renderSearch($('#searchInput')?.value || '');
-  });
+  $("searchInput").value = "";
+  $("searchResults").innerHTML = saved.length ? saved.map(product => {
+    const image = getImages(product)[0] || "";
 
-  $('#wishlistBtn')?.addEventListener('click', showWishlist);
+    return `
+      <a class="p-search-result" href="/product.html?id=${encodeURIComponent(product.id)}">
+        <img src="${escapeHTML(image)}" alt="">
+        <span>
+          <strong>${escapeHTML(product.name)}</strong>
+          <p>${money(product.price)}</p>
+        </span>
+      </a>
+    `;
+  }).join("") : `<p class="p-empty">Your wishlist is empty.</p>`;
 
-  $('#searchInput')?.addEventListener('input', event => {
-    renderSearch(event.target.value);
-  });
-
-  $('#overlay')?.addEventListener('click', closeAllDrawers);
-
-  $$('[data-close]').forEach(button => {
-    button.addEventListener('click', () => {
-      closeDrawer(button.dataset.close);
-    });
-  });
-
-  $('#menuBtn')?.addEventListener('click', () => {
-    const nav = $('#mobileNav');
-    if (!nav) return;
-
-    const opened = nav.classList.toggle('open');
-    nav.setAttribute('aria-hidden', String(!opened));
-  });
-
-  $('#checkoutForm')?.addEventListener('submit', event => {
-    event.preventDefault();
-    toast('Online payment is not connected yet.');
-  });
+  showDrawer("searchDrawer");
 }
 
 async function loadProducts() {
+  $("productName").textContent = "Loading product...";
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("is_active", true);
+
+  if (error) {
+    $("productName").textContent = "Unable to load product";
+    $("productDescription").textContent =
+      "Please refresh the page. If the issue continues, check the Supabase products table and permissions.";
+    console.error("AURENAR product loading error:", error);
+    return;
+  }
+
+  products = data || [];
+
   const params = new URLSearchParams(location.search);
-  const requestedId = params.get('id');
-  const requestedSlug = params.get('slug');
+  const productId = params.get("id");
+  const productSlug = params.get("slug");
 
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true);
-
-    if (error) throw error;
-
-    products = (data || []).map(normalize);
-  } catch (error) {
-    console.error('AURENAR product loading error:', error);
-    products = [];
+  if (productId) {
+    currentProduct = products.find(product =>
+      String(product.id) === String(productId)
+    );
+  } else if (productSlug) {
+    currentProduct = products.find(product =>
+      String(product.slug) === String(productSlug)
+    );
   }
 
-  if (!products.length) {
-    products = FALLBACK.map(normalize);
+  if (!productId && !productSlug) {
+    $("productName").textContent = "Product not selected";
+    $("productDescription").textContent =
+      "Please open a product from the collection to view its details.";
+    $("relatedProducts").innerHTML = "";
+    return;
   }
 
-  selectedProduct = products.find(product =>
-    requestedId && String(product.id) === String(requestedId)
-  );
-
-  if (!selectedProduct && requestedSlug) {
-    selectedProduct = products.find(product => {
-      const slug = String(product.slug || product.name || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
-
-      return slug === requestedSlug.toLowerCase();
-    });
-  }
-
-  if (!selectedProduct) {
-    selectedProduct = products[0];
+  if (!currentProduct) {
+    $("productName").textContent = "Product not found";
+    $("productDescription").textContent =
+      "This product may be unavailable or the link may be incorrect.";
+    $("relatedProducts").innerHTML = "";
+    return;
   }
 
   renderProduct();
-  renderBag();
+  renderRelatedProducts();
   updateBagCount();
-  updateWishlistButton();
+}
+
+function wireInterface() {
+  $("bagBtn").addEventListener("click", () => {
+    renderBag();
+    showDrawer("bagDrawer");
+  });
+
+  $("accountBtn").addEventListener("click", () => {
+    showDrawer("accountDrawer");
+    renderAccount();
+  });
+
+  $("searchBtn").addEventListener("click", () => {
+    renderSearch("");
+    showDrawer("searchDrawer");
+    $("searchInput").focus();
+  });
+
+  $("wishlistBtn").addEventListener("click", showWishlist);
+  $("productHeart").addEventListener("click", toggleWishlist);
+  $("addToBagBtn").addEventListener("click", addToBag);
+
+  $("sizeOptions").addEventListener("click", event => {
+    const button = event.target.closest("[data-size]");
+    if (!button) return;
+
+    selectedSize = button.dataset.size;
+    renderSizes();
+    $("productMessage").textContent = "";
+  });
+
+  $("galleryThumbs").addEventListener("click", event => {
+    const button = event.target.closest("[data-image-index]");
+    if (!button) return;
+    changeImage(Number(button.dataset.imageIndex));
+  });
+
+  $("prevImage").addEventListener("click", () => changeImage(galleryIndex - 1));
+  $("nextImage").addEventListener("click", () => changeImage(galleryIndex + 1));
+
+  $("galleryStage").addEventListener("touchstart", event => {
+    touchStartX = event.changedTouches[0].screenX;
+  }, { passive: true });
+
+  $("galleryStage").addEventListener("touchend", event => {
+    const difference = event.changedTouches[0].screenX - touchStartX;
+
+    if (Math.abs(difference) > 45) {
+      changeImage(galleryIndex + (difference < 0 ? 1 : -1));
+    }
+  }, { passive: true });
+
+  $("overlay").addEventListener("click", closeDrawers);
+
+  document.querySelectorAll("[data-close]").forEach(button => {
+    button.addEventListener("click", closeDrawers);
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      closeDrawers();
+      $("sizeModal").classList.remove("open");
+    }
+  });
+
+  $("bagBody").addEventListener("click", event => {
+    const quantityButton = event.target.closest("[data-qty-index]");
+    const removeButton = event.target.closest("[data-remove-index]");
+
+    if (quantityButton) {
+      updateCartQuantity(
+        Number(quantityButton.dataset.qtyIndex),
+        Number(quantityButton.dataset.change)
+      );
+    }
+
+    if (removeButton) {
+      removeCartItem(Number(removeButton.dataset.removeIndex));
+    }
+  });
+
+  $("bagFoot").addEventListener("click", event => {
+    if (event.target.id !== "openCheckoutBtn") return;
+
+    if (!getCart().length) {
+      toast("Your bag is empty.");
+      return;
+    }
+
+    renderCheckout();
+    showDrawer("checkoutDrawer");
+  });
+
+  $("searchInput").addEventListener("input", event => {
+    renderSearch(event.target.value);
+  });
+
+  $("sizeGuideBtn").addEventListener("click", () => {
+    $("sizeModal").classList.add("open");
+  });
+
+  $("closeSizeGuide").addEventListener("click", () => {
+    $("sizeModal").classList.remove("open");
+  });
+
+  $("sizeModal").addEventListener("click", event => {
+    if (event.target.id === "sizeModal") {
+      $("sizeModal").classList.remove("open");
+    }
+  });
+
+  $("paymentNoticeBtn").addEventListener("click", () => {
+    toast("Online payment is not connected yet.");
+  });
+
+  $("menuBtn").addEventListener("click", () => {
+    showDrawer("searchDrawer");
+    $("searchResults").innerHTML = `
+      <a class="p-search-result" href="/men.html"><strong>MEN</strong></a>
+      <a class="p-search-result" href="/women.html"><strong>WOMEN</strong></a>
+      <a class="p-search-result" href="/search.html"><strong>DISCOVER</strong></a>
+    `;
+  });
 }
 
 wireInterface();
 loadProducts();
+updateBagCount();
