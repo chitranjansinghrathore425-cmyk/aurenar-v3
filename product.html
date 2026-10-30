@@ -1,216 +1,243 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f6f2">
-  <title>Product | AURENAR</title>
-  <link rel="stylesheet" href="/styles.css">
-  <style>
-    :root{--paper:#f7f6f2;--ink:#171715;--muted:#77756f;--line:#dedcd5}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif}
-    button,input{font:inherit}
-    button,a{-webkit-tap-highlight-color:transparent}
-    a{color:inherit;text-decoration:none}
-    .p-header{height:66px;padding:0 5%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:var(--paper);position:sticky;top:0;z-index:20}
-    .p-logo{font:26px Georgia,serif;letter-spacing:5px}
-    .p-nav,.p-actions{display:flex;align-items:center;gap:25px}
-    .p-nav a{font-size:10px;letter-spacing:1.7px}
-    .p-icon{border:0;background:none;padding:8px;cursor:pointer;font-size:19px;position:relative}
-    .p-count{font-size:9px;position:absolute;right:0;top:0;background:#171715;color:white;border-radius:50%;min-width:15px;height:15px;display:grid;place-items:center}
-    .p-menu{display:none}
-    .p-main{max-width:1440px;margin:auto;padding:30px 5% 80px}
-    .p-crumb{font-size:10px;letter-spacing:1.2px;color:var(--muted);margin:0 0 22px}
-    .p-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(310px,.75fr);gap:7%;align-items:start}
-    .p-gallery{min-width:0}
-    .p-stage{position:relative;background:#eeece6;overflow:hidden;touch-action:pan-y}
-    .p-stage img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover}
-    .p-gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);border:0;background:#ffffffd9;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:20px}
-    .p-prev{left:14px}.p-next{right:14px}
-    .p-thumbs{display:flex;gap:9px;overflow-x:auto;padding:12px 0}
-    .p-thumb{width:66px;height:82px;flex:0 0 auto;padding:0;border:1px solid transparent;background:none;cursor:pointer}
-    .p-thumb.active{border-color:#171715}
-    .p-thumb img{width:100%;height:100%;object-fit:cover}
-    .p-info{position:sticky;top:95px;padding:5px 0}
-    .p-kicker{font-size:10px;letter-spacing:2px;color:var(--muted);margin:0 0 14px}
-    .p-title{font:clamp(30px,3.2vw,43px)/1.12 Georgia,serif;font-weight:400;margin:0 0 12px}
-    .p-price{font-size:15px;margin:0 0 25px}
-    .p-tax{font-size:10px;color:var(--muted);margin-top:6px}
-    .p-label{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:1.4px;margin:25px 0 12px}
-    .p-colour{font-size:12px;color:#555}
-    .p-sizes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-    .p-size{height:44px;background:transparent;border:1px solid var(--line);cursor:pointer;font-size:12px}
-    .p-size.selected{background:#171715;color:white;border-color:#171715}
-    .p-size:disabled{opacity:.3;text-decoration:line-through;cursor:not-allowed}
-    .p-sizeguide{border:0;background:none;text-decoration:underline;font-size:11px;cursor:pointer;padding:0}
-    .p-actions-row{display:grid;grid-template-columns:1fr 50px;gap:10px;margin-top:22px}
-    .p-add{height:54px;border:1px solid #171715;background:#171715;color:white;font-size:11px;letter-spacing:1.7px;cursor:pointer}
-    .p-heart{height:54px;border:1px solid var(--line);background:transparent;font-size:23px;cursor:pointer}
-    .p-heart.active{color:#a22}
-    .p-message{font-size:11px;color:var(--muted);min-height:18px;margin:10px 0}
-    .p-accordion{border-top:1px solid var(--line);margin-top:22px}
-    .p-accordion details{border-bottom:1px solid var(--line)}
-    .p-accordion summary{list-style:none;cursor:pointer;padding:17px 0;font-size:11px;letter-spacing:1.2px;display:flex;justify-content:space-between}
-    .p-accordion summary::-webkit-details-marker{display:none}
-    .p-accordion summary:after{content:"+"}
-    .p-accordion details[open] summary:after{content:"−"}
-    .p-accordion p{font-size:12px;line-height:1.8;color:#666;margin:0 0 18px}
-    .p-related{margin-top:90px}
-    .p-section-title{font:32px Georgia,serif;font-weight:400;margin:0 0 25px}
-    .p-related-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-    .p-card img{width:100%;aspect-ratio:3/4;object-fit:cover;background:#eeece6;display:block}
-    .p-card h3{font:17px Georgia,serif;font-weight:400;margin:11px 0 5px}
-    .p-card p{font-size:12px;margin:0;color:#555}
-    .p-empty{font-size:13px;color:var(--muted);padding:30px 0}
-    .p-overlay{position:fixed;inset:0;background:#0008;z-index:40;opacity:0;visibility:hidden;transition:.25s}
-    .p-overlay.open{opacity:1;visibility:visible}
-    .p-drawer{position:fixed;z-index:41;right:0;top:0;height:100dvh;width:min(440px,100%);background:var(--paper);transform:translateX(105%);transition:transform .28s ease;display:flex;flex-direction:column}
-    .p-drawer.open{transform:translateX(0)}
-    .p-drawer-head{padding:22px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-    .p-drawer-head h2{font:25px Georgia,serif;font-weight:400;margin:0}
-    .p-close{border:0;background:none;font-size:25px;cursor:pointer}
-    .p-drawer-body{padding:22px 24px;overflow:auto;flex:1}
-    .p-drawer-foot{padding:20px 24px;border-top:1px solid var(--line)}
-    .p-drawer-foot button,.p-primary{width:100%;height:50px;background:#171715;color:white;border:0;font-size:11px;letter-spacing:1.5px;cursor:pointer}
-    .p-cart-row{display:grid;grid-template-columns:78px 1fr;gap:14px;padding:0 0 18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
-    .p-cart-row img{width:78px;height:100px;object-fit:cover;background:#eee}
-    .p-cart-row h3{font:17px Georgia,serif;font-weight:400;margin:0 0 6px}
-    .p-cart-row p{font-size:11px;color:#666;margin:4px 0}
-    .p-qty{display:flex;align-items:center;gap:12px;margin-top:10px}
-    .p-qty button{border:1px solid var(--line);background:none;width:27px;height:27px;cursor:pointer}
-    .p-remove{border:0;background:none;text-decoration:underline;font-size:10px;cursor:pointer;margin-left:8px}
-    .p-total{display:flex;justify-content:space-between;font-size:13px;margin:8px 0}
-    .p-field{width:100%;height:46px;border:1px solid var(--line);background:transparent;padding:0 12px;margin:7px 0;font-size:13px}
-    .p-search-result{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
-    .p-search-result img{width:55px;height:70px;object-fit:cover}
-    .p-search-result strong{font:16px Georgia,serif;font-weight:400}
-    .p-note{font-size:11px;line-height:1.7;color:#777}
-    .p-toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);background:#171715;color:white;padding:12px 18px;font-size:11px;opacity:0;pointer-events:none;transition:.2s;z-index:60}
-    .p-toast.show{opacity:1;transform:translate(-50%,0)}
-    .p-size-modal{position:fixed;inset:0;z-index:55;background:#0008;display:none;align-items:center;justify-content:center;padding:18px}
-    .p-size-modal.open{display:flex}
-    .p-size-box{background:var(--paper);width:min(520px,100%);padding:24px}
-    .p-size-box h2{font:27px Georgia,serif;font-weight:400;margin:0 0 16px}
-    .p-size-box table{border-collapse:collapse;width:100%;font-size:12px}
-    .p-size-box th,.p-size-box td{padding:12px 8px;border-bottom:1px solid var(--line);text-align:left}
-    .p-size-box .p-close{float:right}
-    @media(max-width:760px){
-      .p-header{height:58px;padding:0 16px}.p-logo{font-size:22px;letter-spacing:4px}
-      .p-nav{display:none}.p-actions{gap:5px}.p-menu{display:inline-block}
-      .p-main{padding:18px 0 55px}.p-crumb{padding:0 16px;margin-bottom:14px}
-      .p-layout{display:block}.p-gallery{width:100%}.p-stage img{aspect-ratio:4/5}
-      .p-thumbs{padding:10px 16px}.p-info{position:static;padding:25px 18px 0}
-      .p-title{font-size:34px}.p-related{margin:65px 16px 0}
-      .p-section-title{font-size:28px}.p-related-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 12px}
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#080808">
+<title>AURENAR — Product</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#080808;--panel:#111;--line:#303030;--muted:#aaa;--white:#f5f3ef}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--white);font-family:Inter,Arial,sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+a{color:inherit;text-decoration:none}
+.site-header{height:64px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #242424;position:sticky;top:0;background:#080808;z-index:20}
+.wordmark{font-family:"Cormorant Garamond",serif;font-size:31px;letter-spacing:5px}
+.header-actions{display:flex;align-items:center;gap:17px}
+.icon-action{background:none;border:0;color:white;padding:5px;font-size:21px}
+.icon-action svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.5}
+.bag-action{position:relative}
+#bagCount{position:absolute;top:-5px;right:-7px;font-size:10px;background:white;color:#111;border-radius:50%;min-width:16px;height:16px;display:grid;place-items:center}
+.desktop-nav{display:none}
+main{max-width:1200px;margin:auto}
+.product-layout{display:block}
+.gallery{position:relative}
+.gallery-stage{position:relative;background:#151515;overflow:hidden;touch-action:pan-y}
+.gallery-stage img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
+.gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);border:0;background:#0008;color:white;width:35px;height:45px;font-size:24px}
+#prevImage{left:8px}
+#nextImage{right:8px}
+.gallery-count{position:absolute;right:12px;bottom:12px;background:#0009;padding:6px 10px;font-size:11px}
+.gallery-thumbs{display:flex;gap:7px;overflow-x:auto;padding:10px 14px}
+.gallery-thumb{width:55px;height:70px;flex:0 0 auto;border:1px solid #555;background:#171717;padding:0}
+.gallery-thumb img{width:100%;height:100%;object-fit:cover}
+.product-info{padding:22px 18px 35px}
+.product-name{font-size:22px;font-weight:500;margin:0 0 8px}
+.product-price{font-size:16px;margin:0 0 14px}
+.product-colour{font-size:12px;color:#bbb;margin-bottom:24px}
+.section-label{font-size:12px;font-weight:600;letter-spacing:.4px;margin:20px 0 12px}
+.size-options{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+.size-option{min-height:43px;background:transparent;border:1px solid #555;color:white;font-size:12px}
+.size-option.selected{background:#f4f2ed;color:#111;border-color:#f4f2ed}
+.size-option:disabled{opacity:.3;text-decoration:line-through}
+.size-guide-row{display:flex;justify-content:space-between;align-items:center;margin:15px 0 18px;font-size:12px}
+.text-button{background:none;border:0;color:white;text-decoration:underline;text-underline-offset:4px;font-size:12px}
+.size-suggestion{background:#252525;padding:12px 14px;font-size:11px;color:#ddd;margin:15px 0}
+.purchase-row{display:flex;gap:12px}
+.add-button{height:54px;flex:1;background:#f5f3ef;color:#111;border:0;font-size:12px;font-weight:700;letter-spacing:1px}
+.heart-button{width:54px;height:54px;border:1px solid #777;background:transparent;color:white;font-size:24px}
+.product-message{font-size:12px;color:#ccc;min-height:18px;margin-top:12px}
+.store-link{display:block;text-align:center;padding:18px 0;border-bottom:1px solid var(--line);font-size:12px;text-decoration:underline;text-underline-offset:4px}
+.product-accordions{border-top:1px solid var(--line);margin-top:24px}
+.product-accordions details{border-bottom:1px solid var(--line)}
+.product-accordions summary{padding:19px 0;list-style:none;display:flex;justify-content:space-between;font-size:13px;cursor:pointer}
+.product-accordions summary:after{content:"+";font-size:18px}
+.product-accordions details[open] summary:after{content:"−"}
+.accordion-content{font-size:12px;color:#bbb;line-height:1.8;padding:0 0 18px}
+.related-section{padding:35px 16px 50px}
+.related-heading{font-family:"Cormorant Garamond",serif;font-size:29px;font-weight:400;margin:0 0 20px}
+.related-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 10px}
+.related-products img{width:100%;aspect-ratio:3/4;object-fit:cover;background:#181818}
+.related-products a{font-size:12px}
+.related-products p{margin:8px 0 5px}
+.related-products small{color:#bbb}
+.site-footer{border-top:1px solid var(--line);padding:28px 18px 45px;color:#aaa;font-size:11px;line-height:2}
+.footer-logo{font-family:"Cormorant Garamond",serif;color:white;font-size:27px;letter-spacing:4px}
+.drawer{position:fixed;z-index:60;top:0;right:0;width:min(420px,100%);height:100dvh;background:#111;color:white;transform:translateX(105%);transition:transform .3s ease;display:flex;flex-direction:column;padding:20px}
+.drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:16px}
+.drawer-head h2{font-size:17px;font-weight:500}
+.drawer-close{border:0;background:none;color:white;font-size:25px}
+.drawer-body{overflow:auto;flex:1;padding:16px 0}
+.drawer-foot{border-top:1px solid var(--line);padding-top:16px}
+.drawer-foot button,.primary-button{width:100%;height:50px;background:#f5f3ef;color:#111;border:0;font-size:12px;font-weight:700}
+.drawer input{width:100%;padding:14px;margin:8px 0;background:#1b1b1b;color:white;border:1px solid #444}
+.drawer button.secondary{background:transparent;color:white;border:1px solid #777}
+.overlay{position:fixed;inset:0;background:#000b;z-index:50;display:none}
+.overlay.show{display:block}
+.mobile-nav{display:none;position:fixed;z-index:45;inset:64px 0 0;background:#080808;padding:25px}
+.mobile-nav.open{display:block}
+.mobile-nav a{display:block;padding:18px 0;border-bottom:1px solid #333;font-size:14px}
+.toast{position:fixed;z-index:90;bottom:25px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#f5f3ef;color:#111;padding:13px 20px;font-size:12px;transition:.25s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.size-modal{position:fixed;z-index:80;inset:0;background:#000b;display:none;align-items:center;justify-content:center;padding:18px}
+.size-modal.open{display:flex}
+.size-modal-content{background:#171717;border:1px solid #444;padding:24px;width:min(400px,100%)}
+.size-modal-content h3{font-family:"Cormorant Garamond",serif;font-size:25px;font-weight:400}
+.size-modal-content p{font-size:12px;line-height:1.8;color:#bbb}
+.size-modal-content button{background:none;border:1px solid #777;color:white;padding:10px 20px}
+@media(min-width:760px){
+.site-header{height:76px;padding:0 5%}
+.desktop-nav{display:flex;gap:25px;font-size:11px;letter-spacing:1px}
+.product-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(360px,.8fr);gap:5%}
+.gallery-stage img{aspect-ratio:4/5}
+.product-info{padding:45px 35px 35px 0;position:sticky;top:100px;align-self:start}
+.product-name{font-size:28px}
+.related-products{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+}
+</style>
 </head>
 <body>
-  <header class="p-header">
-    <button class="p-icon p-menu" id="menuBtn" aria-label="Menu">☰</button>
-    <a class="p-logo" href="/">AURENAR</a>
-    <nav class="p-nav">
-      <a href="/men.html">MEN</a>
-      <a href="/women.html">WOMEN</a>
-      <a href="/search.html">DISCOVER</a>
-    </nav>
-    <div class="p-actions">
-      <button class="p-icon" id="searchBtn" aria-label="Search">⌕</button>
-      <button class="p-icon" id="accountBtn" aria-label="Account">♙</button>
-      <button class="p-icon" id="wishlistBtn" aria-label="Wishlist">♡</button>
-      <button class="p-icon" id="bagBtn" aria-label="Shopping bag">▱<span class="p-count" id="bagCount">0</span></button>
-    </div>
-  </header>
+<header class="site-header">
+<button class="icon-action" id="menuBtn" aria-label="Menu">☰</button>
+<a class="wordmark" href="/">AURENAR</a>
+<nav class="desktop-nav">
+<a href="/">HOME</a><a href="/men.html">MEN</a><a href="/women.html">WOMEN</a>
+</nav>
+<div class="header-actions">
+<button class="icon-action" id="searchBtn" aria-label="Search">⌕</button>
+<button class="icon-action" id="accountBtn" aria-label="Account">♙</button>
+<button class="icon-action" id="wishlistBtn" aria-label="Wishlist">♡</button>
+<button class="icon-action bag-action" id="bagBtn" aria-label="Bag">♧<span id="bagCount">0</span></button>
+</div>
+</header>
 
-  <main class="p-main">
-    <p class="p-crumb"><a href="/">HOME</a> / <span id="breadcrumbName">PRODUCT</span></p>
-    <section class="p-layout">
-      <div class="p-gallery">
-        <div class="p-stage" id="galleryStage">
-          <img id="mainImage" src="" alt="Product image">
-          <button class="p-gallery-arrow p-prev" id="prevImage" aria-label="Previous image">‹</button>
-          <button class="p-gallery-arrow p-next" id="nextImage" aria-label="Next image">›</button>
-        </div>
-        <div class="p-thumbs" id="galleryThumbs"></div>
-      </div>
+<nav class="mobile-nav" id="mobileNav">
+<a href="/">Home</a><a href="/men.html">Men</a><a href="/women.html">Women</a>
+<a href="/search.html">Discover</a>
+</nav>
 
-      <div class="p-info" id="productDetail">
-        <p class="p-kicker">AURENAR COLLECTION</p>
-        <h1 class="p-title" id="productName">Loading product</h1>
-        <p class="p-price" id="productPrice">—</p>
-        <p class="p-tax">Inclusive of applicable taxes</p>
-        <div class="p-label"><span>COLOUR</span><span class="p-colour" id="productColour">As shown</span></div>
-        <div class="p-label"><span>SELECT SIZE</span><button class="p-sizeguide" id="sizeGuideBtn">SIZE GUIDE</button></div>
-        <div class="p-sizes" id="sizeOptions"></div>
-        <div class="p-actions-row">
-          <button class="p-add" id="addToBagBtn">ADD TO BAG</button>
-          <button class="p-heart" id="productHeart" aria-label="Add to wishlist">♡</button>
-        </div>
-        <p class="p-message" id="productMessage"></p>
-        <div class="p-accordion">
-          <details open><summary>PRODUCT DESCRIPTION</summary><p id="productDescription">Details will appear here.</p></details>
-          <details><summary>DELIVERY & RETURNS</summary><p>Complimentary shipping on orders over ₹2,500. Delivery timelines and return eligibility will be confirmed at checkout. Please check the product condition and size before placing your order.</p></details>
-          <details><summary>PRODUCT DETAILS</summary><p id="productDetailsText">Designed with attention to fabric, fit and finish.</p></details>
-        </div>
-      </div>
-    </section>
+<main>
+<section class="product-layout">
+<div class="gallery">
+<div class="gallery-stage" id="galleryStage">
+<img id="mainImage" src="" alt="AURENAR product image">
+<button class="gallery-arrow" id="prevImage" aria-label="Previous image">‹</button>
+<button class="gallery-arrow" id="nextImage" aria-label="Next image">›</button>
+<span class="gallery-count" id="galleryCount">1 / 1</span>
+</div>
+<div class="gallery-thumbs" id="galleryThumbs"></div>
+</div>
 
-    <section class="p-related" id="relatedSection">
-      <h2 class="p-section-title">You may also like</h2>
-      <div class="p-related-grid" id="relatedProducts"></div>
-    </section>
-  </main>
+<div class="product-info">
+<div id="productDetail">
+<h1 class="product-name" id="productName">Loading product…</h1>
+<p class="product-price" id="productPrice"></p>
+<p class="product-colour" id="productColour"></p>
+<p class="section-label">SELECT SIZE</p>
+<div class="size-options" id="sizeOptions"></div>
+<div class="size-guide-row">
+<span>Find your fit</span>
+<button class="text-button" id="sizeGuideBtn">SIZE GUIDE</button>
+</div>
+<div class="size-suggestion">Not sure about your size? Check the size guide before ordering.</div>
+<div class="purchase-row">
+<button class="add-button" id="addToBagBtn">ADD TO BAG</button>
+<button class="heart-button" id="productHeart" aria-label="Add to wishlist">♡</button>
+</div>
+<p class="product-message" id="productMessage"></p>
+<a class="store-link" href="/search.html">FIND MORE FROM AURENAR</a>
+<div class="product-accordions">
+<details open>
+<summary>DESCRIPTION</summary>
+<div class="accordion-content" id="productDescription">Discover the details of this piece.</div>
+</details>
+<details>
+<summary>DETAILS & MATERIAL</summary>
+<div class="accordion-content" id="productDetailsText">Designed with attention to fit, fabric and finish.</div>
+</details>
+<details>
+<summary>DELIVERY AND PAYMENT</summary>
+<div class="accordion-content">Shipping charges are shown in your bag. Payment options will be displayed when a secure payment gateway is connected. No payment is currently collected on this page.</div>
+</details>
+<details>
+<summary>RETURNS</summary>
+<div class="accordion-content">Please contact AURENAR support for return and exchange assistance.</div>
+</details>
+</div>
+</div>
+</div>
+</section>
 
-  <div class="p-overlay" id="overlay"></div>
+<section class="related-section" id="relatedSection">
+<h2 class="related-heading">You may also like</h2>
+<div class="related-products" id="relatedProducts"></div>
+</section>
+</main>
 
-  <aside class="p-drawer" id="bagDrawer">
-    <div class="p-drawer-head"><h2>Your bag</h2><button class="p-close" data-close>×</button></div>
-    <div class="p-drawer-body" id="bagBody"></div>
-    <div class="p-drawer-foot" id="bagFoot"></div>
-  </aside>
+<footer class="site-footer">
+<div class="footer-logo">AURENAR</div>
+<p>QUIETLY DISTINCT.</p>
+<p><a href="/">Home</a>　<a href="/men.html">Men</a>　<a href="/women.html">Women</a>　<a href="/search.html">Discover</a></p>
+<p>© <span id="year"></span> AURENAR. All rights reserved.</p>
+</footer>
 
-  <aside class="p-drawer" id="accountDrawer">
-    <div class="p-drawer-head"><h2>Your account</h2><button class="p-close" data-close>×</button></div>
-    <div class="p-drawer-body" id="accountBody"></div>
-  </aside>
+<div class="overlay" id="overlay"></div>
 
-  <aside class="p-drawer" id="searchDrawer">
-    <div class="p-drawer-head"><h2>Discover</h2><button class="p-close" data-close>×</button></div>
-    <div class="p-drawer-body">
-      <input class="p-field" id="searchInput" placeholder="Search products..." autocomplete="off">
-      <div id="searchResults"></div>
-    </div>
-  </aside>
+<aside class="drawer" id="bagDrawer">
+<div class="drawer-head"><h2>Your bag</h2><button class="drawer-close" data-close="bagDrawer">×</button></div>
+<div class="drawer-body" id="bagBody"></div>
+<div class="drawer-foot" id="bagFoot"></div>
+</aside>
 
-  <aside class="p-drawer" id="checkoutDrawer">
-    <div class="p-drawer-head"><h2>Checkout</h2><button class="p-close" data-close>×</button></div>
-    <div class="p-drawer-body">
-      <div id="checkoutSummary"></div>
-      <p class="p-note">Payment is not connected yet. No payment will be taken and no order will be placed from this page.</p>
-      <button class="p-primary" id="paymentNoticeBtn">PAYMENT NOT AVAILABLE</button>
-    </div>
-  </aside>
+<aside class="drawer" id="accountDrawer">
+<div class="drawer-head"><h2>Account</h2><button class="drawer-close" data-close="accountDrawer">×</button></div>
+<div class="drawer-body" id="accountBody">
+<p>Sign in to your AURENAR account.</p>
+<input id="accountEmail" type="email" placeholder="Email address">
+<input id="accountPassword" type="password" placeholder="Password">
+<button class="primary-button" id="loginBtn">SIGN IN</button>
+<button class="primary-button secondary" id="signupBtn" style="margin-top:10px">CREATE ACCOUNT</button>
+<p id="accountMessage"></p>
+</div>
+</aside>
 
-  <div class="p-size-modal" id="sizeModal">
-    <div class="p-size-box">
-      <button class="p-close" id="closeSizeGuide">×</button>
-      <h2>Size guide</h2>
-      <p class="p-note">Approximate body measurements in inches. Choose the size closest to your measurements.</p>
-      <table>
-        <thead><tr><th>Size</th><th>Chest</th><th>Waist</th></tr></thead>
-        <tbody>
-          <tr><td>XS</td><td>34–36</td><td>28–30</td></tr>
-          <tr><td>S</td><td>36–38</td><td>30–32</td></tr>
-          <tr><td>M</td><td>38–40</td><td>32–34</td></tr>
-          <tr><td>L</td><td>40–42</td><td>34–36</td></tr>
-          <tr><td>XL</td><td>42–44</td><td>36–38</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+<aside class="drawer" id="searchDrawer">
+<div class="drawer-head"><h2>Search</h2><button class="drawer-close" data-close="searchDrawer">×</button></div>
+<div class="drawer-body">
+<input id="searchInput" type="search" placeholder="Search products">
+<div id="searchResults"></div>
+</div>
+</aside>
 
-  <div class="p-toast" id="toast"></div>
-  <script type="module" src="/product.js"></script>
+<aside class="drawer" id="checkoutDrawer">
+<div class="drawer-head"><h2>Checkout</h2><button class="drawer-close" data-close="checkoutDrawer">×</button></div>
+<div class="drawer-body">
+<div id="checkoutSummary"></div>
+<p style="font-size:12px;color:#aaa;line-height:1.7">Secure online payment is not connected yet. No payment will be taken.</p>
+</div>
+<div class="drawer-foot">
+<button type="button" disabled style="opacity:.5">PAYMENT COMING SOON</button>
+</div>
+</aside>
+
+<div class="size-modal" id="sizeModal">
+<div class="size-modal-content">
+<h3>Size guide</h3>
+<p>Choose your usual size. For the best fit, compare your body measurements with the garment measurements before ordering.</p>
+<p>For assistance with sizing, contact AURENAR before placing your order.</p>
+<button id="closeSizeGuide">CLOSE</button>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>document.getElementById("year").textContent=new Date().getFullYear();</script>
+<script type="module" src="/product.js"></script>
 </body>
 </html>
